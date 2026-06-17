@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rushmore BOL System — MVP</title>
+<style>
+  :root{
+    --navy:#1F3A5F;--blue:#2E75B6;--ink:#23282d;--muted:#6b7280;--line:#e3e8ef;
+    --bg:#eef1f5;--card:#fff;--ok:#1D9E75;--okbg:#e7f6ef;--warn:#b9770e;--warnbg:#fdf4e3;
+    --bad:#c0392b;--badbg:#fbeae7;--info:#2563eb;--infobg:#e8f0fe;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       background:var(--bg);color:var(--ink);font-size:15px;line-height:1.5}
+  header.app{background:var(--navy);color:#fff;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
+  header.app h1{margin:0;font-size:17px;font-weight:700;cursor:pointer}
+  header.app .tag{font-size:10px;background:#3a557a;border-radius:5px;padding:2px 7px;margin-left:8px;vertical-align:middle}
+  header.app nav button{background:transparent;color:#cdd8e6;border:0;font:inherit;font-weight:600;cursor:pointer;padding:6px 10px;border-radius:7px}
+  header.app nav button:hover{background:#2c456b}
+  .wrap{max-width:920px;margin:0 auto;padding:22px 16px 80px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(20,40,70,.04)}
+  h2{font-size:18px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+  button{font:inherit;font-weight:600;border:0;border-radius:9px;padding:10px 16px;cursor:pointer;background:var(--blue);color:#fff;transition:filter .15s}
+  button:hover{filter:brightness(1.07)}
+  button.ghost{background:#eef2f7;color:var(--navy)} button.alt{background:var(--navy)} button.sm{padding:6px 11px;font-size:13px}
+  button:disabled{opacity:.45;cursor:not-allowed;filter:none}
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .right{margin-left:auto}
+  textarea,input,select{font:inherit;width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:#fbfcfe}
+  textarea:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
+  label.fl{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px 18px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 14px}
+  .f{display:flex;flex-direction:column;margin-bottom:4px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+  td.r,th.r{text-align:right;font-variant-numeric:tabular-nums}
+  .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  .p-ok{background:var(--okbg);color:var(--ok)} .p-warn{background:var(--warnbg);color:var(--warn)}
+  .p-bad{background:var(--badbg);color:var(--bad)} .p-info{background:var(--infobg);color:var(--info)} .p-grey{background:#eef0f3;color:#667}
+  .banner{border-radius:10px;padding:14px 16px;font-weight:600;margin-top:6px}
+  .banner.ok{background:var(--okbg);border:1px solid #bfe6d4;color:#0f6e56}
+  .banner.bad{background:var(--badbg);border:1px solid #f1c6bd;color:#922}
+  .banner small{display:block;font-weight:500;margin-top:5px;opacity:.85}
+  .steps{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+  .steps .s{font-size:11.5px;font-weight:700;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:20px;padding:4px 11px}
+  .steps .s.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .steps .s.done{background:var(--okbg);color:var(--ok);border-color:#bfe6d4}
+  .joblist{display:flex;flex-direction:column;gap:10px}
+  .jobrow{display:flex;align-items:center;gap:14px;padding:13px 16px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer}
+  .jobrow:hover{border-color:var(--blue);background:#f7fafd}
+  .jobrow .id{font-weight:700} .jobrow .meta{color:var(--muted);font-size:12.5px}
+  .sig{border:1px dashed #b9c2cf;border-radius:8px;background:#fff;touch-action:none;display:block;width:100%;height:120px}
+  .sigwrap{margin-bottom:6px}
+  .muted{color:var(--muted);font-size:12px}
+  .change{background:var(--warnbg)}
+  .empty{text-align:center;color:var(--muted);padding:30px}
+  /* print BOL */
+  #printview{display:none}
+  .bol{max-width:760px;margin:0 auto;border:2px solid var(--navy);border-radius:6px;padding:0;background:#fff}
+  .bol .top{background:var(--navy);color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center}
+  .bol .top h3{margin:0;font-size:16px} .bol .sec{padding:12px 16px;border-top:1px solid var(--line)}
+  .bol .sec h4{margin:0 0 8px;font-size:12px;letter-spacing:.5px;color:var(--navy)}
+  .wm{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:0}
+  .wm span{font-size:80px;font-weight:800;color:rgba(150,160,175,.13);transform:rotate(-32deg)}
+  @media print{
+    header.app,.noprint{display:none!important}
+    body{background:#fff} .wrap{padding:0}
+    #printview{display:block!important}
+  }
+  @media(max-width:640px){.grid,.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="app">
+  <h1 onclick="go('dashboard')">Rushmore Van Lines · BOL System <span class="tag">MVP PROTOTYPE</span></h1>
+  <nav><button onclick="go('dashboard')">Dashboard</button><button onclick="newJob()">+ New job</button></nav>
+</header>
+<div class="wrap" id="app"></div>
+
+<!-- hidden printable BOL -->
+<div id="printview"></div>
+
+<script>
+/* ---------------- storage ---------------- */
+const store = {
+  get(){ try{ return JSON.parse(localStorage.getItem('rvl_jobs')||'null') || window._j || []; }catch(e){ return window._j||[]; } },
+  set(j){ window._j=j; try{ localStorage.setItem('rvl_jobs', JSON.stringify(j)); }catch(e){} }
+};
+const money = n => (n<0?'-$':'$')+Math.abs(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const num = v => { if(v===''||v==null) return null; const n=parseFloat(String(v).replace(/[$,]/g,'')); return isNaN(n)?null:n; };
+const $ = s => document.querySelector(s);
+let cur = null; // job being worked
+
+/* ---------------- sample estimate ---------------- */
+const SAMPLE_EMAIL =
+`From: Demo Broker <broker@example.com>
+Subject: Moving Estimate - Job 90000001
+
+Customer: Jordan Demo   (555) 010-2026   demo@example.com
+Moving From: 100 Test Street, Demo City, WA 98000
+Moving To: 200 Sample Ave, Trial Town, WA 98100
+Estimated Volume: 1650 cf    Rate: $2.00 per cf
+Basic Estimate Price: $3,300.00
+Fuel Surcharge 12.5%: $412.50
+PGS Delivery: $226.50
+Convenience Fee: $244.49
+Bulky Items (lawnmower, kayak, tool box): $500.00
+Full Pack: $1,650.00
+Discount: -$1,300.00
+Binding Estimate Fee: $3,976.56
+Total Moving Estimate: $9,010.05
+Customer Payment (deposit): $3,834.40
+Valuation: 60c/lb waiver
+Requested pickup: 06/12/2026   Delivery: 06/12/2026`;
+
+/* ---------------- extraction (lightweight parser) ---------------- */
+function extract(text){
+  const g = (re,d='') => { const m=text.match(re); return m? m[1].trim() : d; };
+  const n = (re) => num(g(re));
+  return {
+    job: g(/Job\s*#?\s*(\d{6,})/i) || g(/(\d{8})/),
+    customer: g(/Customer:\s*([A-Za-z .'-]+?)(?:\s{2,}|\()/i),
+    phone: g(/(\(\d{3}\)\s?\d{3}-\d{4})/),
+    email: g(/([\w.+-]+@[\w.-]+\.\w+)(?![^]*Safe Ship)/i) || g(/([\w.+-]+@(?!safeship)[\w.-]+\.\w+)/i),
+    oAddr: g(/Moving From:\s*(.+)/i),
+    dAddr: g(/Moving To:\s*(.+)/i),
+    volume: n(/Volume:\s*([\d,]+)/i),
+    rate: n(/Rate:\s*\$?([\d.]+)/i),
+    basic: n(/Basic[^$]*\$([\d,]+\.?\d*)/i),
+    fuel: n(/Fuel[^$]*\$([\d,]+\.?\d*)/i),
+    pgs: n(/PGS[^$]*\$([\d,]+\.?\d*)/i),
+    convenience: n(/Convenience[^$]*\$([\d,]+\.?\d*)/i),
+    bulky: n(/Bulky[^$]*\$([\d,]+\.?\d*)/i),
+    packing: n(/(?:Full Pack|Packing)[^$]*\$([\d,]+\.?\d*)/i),
+    discount: (function(){const m=text.match(/Discount:\s*-?\$([\d,]+\.?\d*)/i); return m? -num(m[1]) : 0;})(),
+    binding: n(/Binding[^$]*\$([\d,]+\.?\d*)/i),
+    total: n(/Total[^$]*\$([\d,]+\.?\d*)/i),
+    deposit: n(/(?:deposit|Customer Payment)[^$]*\$([\d,]+\.?\d*)/i),
+    valuation: /60c|60¢|0\.60|waiver/i.test(text) ? '60¢/lb waiver' : 'See estimate',
+    pickup: g(/pickup:\s*([\d/]+)/i) || '06/12/2026',
+    delivery: g(/Delivery:\s*([\d/]+)/i) || '06/12/2026',
+  };
+}
+
+/* ---------------- self-check ---------------- */
+function selfCheck(e){
+  const lineSum = (e.basic||0)+(e.fuel||0)+(e.pgs||0)+(e.convenience||0)+(e.bulky||0)+(e.packing||0)+(e.discount||0)+(e.binding||0);
+  return [
+    ['Line items sum to total', e.total!=null && Math.abs(lineSum-e.total)<0.02, money(lineSum)+' vs '+money(e.total)],
+    ['Basic = volume × rate', e.basic!=null && e.volume!=null && e.rate!=null && Math.abs(e.volume*e.rate-e.basic)<1, (e.volume||'?')+' × $'+(e.rate||'?')],
+    ['Customer + addresses present', !!(e.customer&&e.oAddr&&e.dAddr), e.customer||'missing'],
+    ['Deposit ≤ total', e.deposit!=null&&e.total!=null&&e.deposit<=e.total, money(e.deposit)],
+  ];
+}
+
+/* ---------------- verify (foreman submission vs estimate) ---------------- */
+function verify(job){
+  const e=job.est, f=job.bol, out=[];
+  const mm=(label,key)=>{
+    const g=num(f[key]); const want=e[key];
+    if(g===null) out.push([label,'BLANK','required field empty']);
+    else if(want==null||Math.abs(g-want)<0.02) out.push([label,'OK',money(g)]);
+    else out.push([label,'CHANGE',money(g)+'  (est '+money(want)+')'+(f._reason?'  · '+f._reason:'')]);
+  };
+  ['basic','fuel','pgs','convenience','bulky','packing','binding','total','deposit'].forEach(k=>{
+    const lbl={basic:'Basic price',fuel:'Fuel surcharge',pgs:'PGS delivery',convenience:'Convenience fee',
+      bulky:'Bulky articles',packing:'Packing / full pack',binding:'Binding fee',total:'Total charges',deposit:'Prepaid deposit'}[k];
+    mm(lbl,k);
+  });
+  const vis=(num(f.basic)||0)+(num(f.fuel)||0)+(num(f.pgs)||0)+(num(f.convenience)||0)+(num(f.bulky)||0)+(num(f.packing)||0)+(num(f.discount)||0)+(num(f.binding)||0);
+  const tot=num(f.total)||0;
+  out.push(Math.abs(vis-tot)<0.02?['Lines sum to total','OK',money(vis)]:['Lines sum to total','GAP',money(vis)+' vs '+money(tot)+'  (gap '+money(tot-vis)+')']);
+  ['customer','oAddr','dAddr'].forEach((k,i)=>{ const lbl=['Customer name','Origin address','Destination address'][i];
+    out.push([lbl, (f[k]&&String(f[k]).trim())?'OK':'BLANK', (f[k]||'empty')]); });
+  out.push(['Customer signature', job.sig.customer?'OK':'BLANK', job.sig.customer?'signed '+job.sig.customerAt:'not signed']);
+  out.push(['Carrier signature', job.sig.carrier?'OK':'BLANK', job.sig.carrier?'signed '+job.sig.carrierAt:'not signed']);
+  return out;
+}
+
+/* ---------------- navigation ---------------- */
+function go(view){ render(view); window.scrollTo(0,0); }
+function newJob(){
+  cur = { id:'tmp'+Date.now(), est:null, bol:{}, sig:{customer:null,carrier:null}, status:'Draft', created:new Date().toLocaleString() };
+  render('intake');
+}
+function steps(active){
+  const s=['Intake','Pre-fill','Sign','Verify','Done'];
+  return '<div class="steps">'+s.map((x,i)=>{
+    const order=['intake','review','sign','verify','done'];
+    const ai=order.indexOf(active);
+    return '<span class="s '+(i===ai?'on':(i<ai?'done':''))+'">'+(i+1)+'. '+x+'</span>';
+  }).join('')+'</div>';
+}
+
+/* ---------------- views ---------------- */
+function render(view){
+  const a=$('#app');
+  if(view==='dashboard') return a.innerHTML=vDashboard();
+  if(view==='intake') return a.innerHTML=vIntake();
+  if(view==='review'){ a.innerHTML=vReview(); return; }
+  if(view==='sign'){ a.innerHTML=vFill(); initSign(); return; }
+  if(view==='verify'){ a.innerHTML=vVerify(); return; }
+}
+
+function statusPill(s){
+  const m={Draft:'p-grey','Pre-filled':'p-info',Verified:'p-ok','Auto-cleared':'p-ok','Needs review':'p-bad'};
+  return '<span class="pill '+(m[s]||'p-grey')+'">'+s+'</span>';
+}
+
+function vDashboard(){
+  const jobs=store.get();
+  let rows = jobs.length? jobs.map(j=>
+    `<div class="jobrow" onclick="openJob('${j.id}')">
+       <div><div class="id">${j.id} · ${j.est?.customer||'—'}</div>
+       <div class="meta">${j.est?.oAddr||''} → ${(j.est?.dAddr||'').split(',')[1]||''} · ${j.est?money(j.est.total):''}</div></div>
+       <div class="right">${statusPill(j.status)}</div></div>`).join('')
+    : '<div class="empty">No jobs yet. Click <b>+ New job</b> to start from a broker estimate.</div>';
+  const cleared=jobs.filter(j=>j.status==='Auto-cleared').length, review=jobs.filter(j=>j.status==='Needs review').length;
+  return `<div class="card"><h2>Jobs</h2><p class="sub">Every booked job flows through here — intake, pre-fill, sign, verify. Click one to open it.</p>
+      <div class="btnrow" style="margin-top:0;margin-bottom:14px"><button onclick="newJob()">+ New job from estimate</button>
+      <span class="right" style="align-self:center"><span class="pill p-ok">${cleared} auto-cleared</span> &nbsp; <span class="pill p-bad">${review} need review</span></span></div>
+      <div class="joblist">${rows}</div></div>
+      <div class="card"><p class="muted" style="margin:0">Prototype · runs entirely in your browser · jobs are saved locally on this device. Signatures here are demonstration only and are not legally binding.</p></div>`;
+}
+
+function vIntake(){
+  return steps('intake')+`<div class="card"><h2>1 · Estimate intake</h2>
+    <p class="sub">In production the broker estimate is auto-forwarded to an intake inbox. Paste one here, or load the sample.</p>
+    <textarea id="estText" rows="12" placeholder="Paste the broker estimate email...">${SAMPLE_EMAIL}</textarea>
+    <div class="btnrow"><button class="ghost" onclick="document.getElementById('estText').value=\`${SAMPLE_EMAIL.replace(/`/g,'\\`')}\`">Load sample (job 26117249)</button>
+    <button onclick="doExtract()">Extract &amp; continue →</button></div></div>`;
+}
+function doExtract(){
+  const e=extract($('#estText').value);
+  if(!e.job){ alert('Could not find a job number — paste a fuller estimate or use the sample.'); return; }
+  cur.est=e; cur.id=e.job; cur.bol=Object.assign({},e); render('review');
+}
+
+function vReview(){
+  const e=cur.est, ch=selfCheck(e), pass=ch.every(c=>c[1]);
+  const rows=ch.map(c=>`<tr><td>${c[0]}</td><td><span class="pill ${c[1]?'p-ok':'p-bad'}">${c[1]?'PASS':'FAIL'}</span></td><td class="r">${c[2]}</td></tr>`).join('');
+  const fields=[['Job',e.job],['Customer',e.customer],['Phone',e.phone],['Email',e.email],
+    ['Origin',e.oAddr],['Destination',e.dAddr],['Volume',e.volume+' cf'],['Rate','$'+e.rate],
+    ['Basic',money(e.basic)],['Fuel',money(e.fuel)],['Total',money(e.total)],['Deposit',money(e.deposit)]];
+  return steps('review')+`<div class="card"><h2>2 · Extracted &amp; self-checked</h2>
+    <p class="sub">Fields pulled from the estimate, then validated automatically before anything is sent to the field.</p>
+    <div class="grid">${fields.map(f=>`<div class="f"><label class="fl">${f[0]}</label><div>${f[1]??'—'}</div></div>`).join('')}</div>
+    <h4 style="margin:18px 0 6px">Self-check</h4>
+    <table><thead><tr><th>Rule</th><th>Result</th><th class="r">Detail</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="banner ${pass?'ok':'bad'}">${pass?'✓ Self-check passed — pre-filling the BOL for the foreman.':'✗ Held — a coordinator should review the estimate.'}</div>
+    <div class="btnrow"><button class="ghost" onclick="render('intake')">← Back</button>
+    <button onclick="render('sign')" ${pass?'':'disabled'}>Create pre-filled BOL →</button></div></div>`;
+}
+
+/* ---------- foreman fill + signatures ---------- */
+const bolFields=[['customer','Customer name'],['oAddr','Origin address'],['dAddr','Destination address'],
+  ['volume','Volume (cf)'],['rate','Rate $/cf'],['basic','Basic'],['fuel','Fuel'],['pgs','PGS'],
+  ['convenience','Convenience'],['bulky','Bulky'],['packing','Packing'],['discount','Discount'],
+  ['binding','Binding fee'],['total','Total'],['deposit','Deposit']];
+function vFill(){
+  const f=cur.bol;
+  const inputs=bolFields.map(([k,l])=>`<div class="f"><label class="fl">${l}</label>
+     <input id="b_${k}" value="${f[k]??''}" oninput="cur.bol['${k}']=this.value"></div>`).join('');
+  return steps('sign')+`<div class="card"><h2>3 · Foreman on site — confirm &amp; sign</h2>
+    <p class="sub">Pre-filled from the estimate. Edit only what changed on site; changes are flagged at verification.</p>
+    <div class="grid">${inputs}</div>
+    <div class="f" style="margin-top:8px"><label class="fl">Reason for any change (required if a value differs)</label>
+      <input id="b_reason" value="${f._reason||''}" oninput="cur.bol._reason=this.value" placeholder="e.g. removed kayak — bulky credit"></div>
+    <div class="grid" style="margin-top:18px">
+      <div><label class="fl">Customer signature</label><div class="sigwrap"><canvas class="sig" id="sigC"></canvas></div>
+        <button class="ghost sm" onclick="clearSig('customer')">Clear</button> <span class="muted" id="stC">${cur.sig.customer?'signed '+cur.sig.customerAt:'draw above'}</span></div>
+      <div><label class="fl">Carrier / foreman signature</label><div class="sigwrap"><canvas class="sig" id="sigR"></canvas></div>
+        <button class="ghost sm" onclick="clearSig('carrier')">Clear</button> <span class="muted" id="stR">${cur.sig.carrier?'signed '+cur.sig.carrierAt:'draw above'}</span></div>
+    </div>
+    <div class="btnrow"><button class="ghost" onclick="render('review')">← Back</button>
+    <button onclick="submitVerify()">Submit &amp; verify →</button></div>
+    <p class="muted" style="margin-top:10px">Demonstration signatures only — captured with a timestamp to show the audit-trail concept. Not legally binding.</p></div>`;
+}
+let pads={};
+function initSign(){
+  [['sigC','customer','stC'],['sigR','carrier','stR']].forEach(([id,key,st])=>{
+    const cv=document.getElementById(id); if(!cv)return;
+    const r=cv.getBoundingClientRect(); cv.width=r.width; cv.height=120;
+    const ctx=cv.getContext('2d'); ctx.lineWidth=2; ctx.lineCap='round'; ctx.strokeStyle='#1b2a44';
+    if(cur.sig[key]){ const img=new Image(); img.onload=()=>ctx.drawImage(img,0,0,cv.width,cv.height); img.src=cur.sig[key]; }
+    let drawing=false,last=null;
+    const pos=ev=>{const b=cv.getBoundingClientRect();const t=ev.touches?ev.touches[0]:ev;return {x:t.clientX-b.left,y:t.clientY-b.top};};
+    const start=ev=>{drawing=true;last=pos(ev);ev.preventDefault();};
+    const move=ev=>{if(!drawing)return;const p=pos(ev);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(p.x,p.y);ctx.stroke();last=p;ev.preventDefault();};
+    const end=()=>{ if(!drawing)return; drawing=false; cur.sig[key]=cv.toDataURL();
+      cur.sig[key+'At']=new Date().toLocaleString(); document.getElementById(st).textContent='signed '+cur.sig[key+'At']; };
+    cv.addEventListener('mousedown',start);cv.addEventListener('mousemove',move);window.addEventListener('mouseup',end);
+    cv.addEventListener('touchstart',start);cv.addEventListener('touchmove',move);cv.addEventListener('touchend',end);
+    pads[id]={cv,ctx};
+  });
+}
+function clearSig(key){ const id=key==='customer'?'sigC':'sigR'; const p=pads[id]; if(p){p.ctx.clearRect(0,0,p.cv.width,p.cv.height);}
+  cur.sig[key]=null; cur.sig[key+'At']=null; document.getElementById(key==='customer'?'stC':'stR').textContent='draw above'; }
+function submitVerify(){ render('verify'); }
+
+/* ---------- verify + save ---------- */
+function vVerify(){
+  const out=verify(cur);
+  const problems=out.filter(o=>o[1]!=='OK');
+  const clean=problems.length===0;
+  cur.status = clean?'Auto-cleared':'Needs review';
+  cur.exceptions = problems.length;
+  saveJob(cur);
+  const cls={OK:'p-ok',CHANGE:'p-warn',BLANK:'p-bad',GAP:'p-bad'};
+  const rows=out.map(o=>`<tr class="${o[1]==='CHANGE'?'change':''}"><td>${o[0]}</td><td><span class="pill ${cls[o[1]]}">${o[1]}</span></td><td class="r">${o[2]}</td></tr>`).join('');
+  return steps('verify')+`<div class="card"><h2>4 · Verification &amp; routing</h2>
+    <p class="sub">The submitted BOL is diffed against the estimate. Clean jobs auto-clear; anything off routes to a coordinator.</p>
+    <div class="banner ${clean?'ok':'bad'}">${clean?'✓ Auto-cleared — matches the estimate and fully signed. No coordinator time needed.':'⚠ Routed to coordinator — '+problems.length+' item(s) need attention.'}
+      <small>${clean?'':'A coordinator sees only the flagged rows below, side-by-side with the estimate.'}</small></div>
+    <table style="margin-top:12px"><thead><tr><th>Field</th><th>Status</th><th class="r">Detail</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="btnrow"><button class="ghost" onclick="render('sign')">← Back to fill</button>
+    <button class="alt" onclick="openPrint('${cur.id}')">Open BOL (Save as PDF) ↧</button>
+    <button onclick="go('dashboard')">Done → dashboard</button></div></div>`;
+}
+function saveJob(job){
+  const jobs=store.get(); const i=jobs.findIndex(j=>j.id===job.id);
+  const clean=JSON.parse(JSON.stringify(job));
+  if(i>=0) jobs[i]=clean; else jobs.unshift(clean); store.set(jobs);
+}
+function openJob(id){ cur=store.get().find(j=>j.id===id); if(!cur)return; cur.sig=cur.sig||{}; render(cur.est?'verify':'intake'); }
+
+/* ---------- printable BOL ---------- */
+function openPrint(id){
+  const j=store.get().find(x=>x.id===id)||cur; const e=j.est,f=j.bol;
+  const line=(k,v)=>`<tr><td>${k}</td><td class="r">${v}</td></tr>`;
+  document.getElementById('printview').innerHTML=`
+   <div class="wm"><span>PROTOTYPE</span></div>
+   <div class="bol">
+     <div class="top"><div><h3>INTERSTATE BILL OF LADING</h3><div style="font-size:11px">Rushmore Van Lines Inc · US DOT 4086767 · MC 1560709</div></div>
+       <div style="text-align:right;font-size:11px">Order #${e.job}<br>Pickup ${e.pickup}</div></div>
+     <div class="sec" style="display:flex;gap:20px">
+       <div style="flex:1"><h4>ORIGIN</h4>${f.customer}<br>${f.oAddr}<br>${f.phone||''}</div>
+       <div style="flex:1"><h4>DESTINATION</h4>${f.customer}<br>${f.dAddr}<br>${f.phone||''}</div></div>
+     <div class="sec"><h4>CHARGES</h4><table>
+       ${line('Transportation ('+f.volume+' cf @ $'+f.rate+')',money(f.basic))}
+       ${line('Fuel surcharge',money(f.fuel))}${line('PGS delivery',money(f.pgs))}${line('Convenience fee',money(f.convenience))}
+       ${line('Bulky articles',money(f.bulky))}${line('Packing / full pack',money(f.packing))}${line('Discount',money(f.discount))}
+       ${line('Binding estimate fee',money(f.binding))}
+       <tr><td style="font-weight:700;border-top:2px solid #1F3A5F">TOTAL APPLICABLE CHARGES</td><td class="r" style="font-weight:700;border-top:2px solid #1F3A5F">${money(f.total)}</td></tr>
+       ${line('Prepaid deposit',money(f.deposit))}</table></div>
+     <div class="sec" style="display:flex;gap:20px">
+       <div style="flex:1"><h4>CUSTOMER SIGNATURE</h4>${j.sig.customer?`<img src="${j.sig.customer}" style="height:60px">`:'<i>unsigned</i>'}<div class="muted">${j.sig.customerAt||''}</div></div>
+       <div style="flex:1"><h4>CARRIER SIGNATURE</h4>${j.sig.carrier?`<img src="${j.sig.carrier}" style="height:60px">`:'<i>unsigned</i>'}<div class="muted">${j.sig.carrierAt||''}</div></div></div>
+     <div class="sec muted">Status: ${j.status} · Generated by Rushmore BOL System (prototype). Demonstration document — signatures are not legally binding.</div>
+   </div>`;
+  window.print();
+}
+
+/* ---------- boot ---------- */
+go('dashboard');
+</script>
+</body>
+</html>
