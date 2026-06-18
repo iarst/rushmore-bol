@@ -96,6 +96,13 @@
   .chrow>span:first-child{font-size:13.5px;color:#3a4452} .chrow.tot>span:first-child{font-weight:800;color:var(--navy)}
   .ce{display:flex;gap:6px;align-items:center} .mny{max-width:118px;text-align:right;padding:7px 9px} .mny.big{font-weight:800;color:var(--navy)}
   .locsel{max-width:120px;padding:6px 8px;font-size:13px} .subh{font-size:11px;font-weight:800;color:var(--teal);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 4px}
+  .sigcard{border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:8px;background:#fbfcfe}
+  .sct{font-weight:700;font-size:12.5px;color:var(--navy);margin-bottom:6px}
+  .sigslots{display:flex;gap:10px;flex-wrap:wrap}
+  .sigslot{flex:1;min-width:150px;border:1px dashed #c8d0da;border-radius:8px;padding:5px 9px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;justify-content:space-between;min-height:42px}
+  .sigslot.on{border-style:solid;border-color:#bfe6d4;background:#f3fbf7}
+  .sigslot img{height:30px;max-width:90px} .sigslot .who{font-weight:700;color:#444} .sigslot .ts{font-size:10px;color:#3a7a63}
+  .sigbtn{padding:5px 13px;font-size:12px}
   @media print{header.app,.noprint{display:none!important} body{background:#fff} .wrap{padding:0;max-width:100%} .card{box-shadow:none;border:0;padding:0}}
   @media(max-width:640px){.grid,.rooms{grid-template-columns:1fr}}
 </style>
@@ -768,18 +775,40 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
    <div class="bolsec"><h4><span class="step">9</span> Condition &amp; exceptions</h4>
      <div class="f"><label class="fl">Damage / exceptions noted at pickup (shown on delivery acknowledgement)</label><textarea id="b_exceptions" rows="3" placeholder="e.g. scratch on dresser top, dent on washer door">${esc(s.exceptions)}</textarea></div></div>
 
-   <div class="bolsec"><h4><span class="step">10</span> Acknowledge &amp; sign <span class="req">*</span></h4>
-     <div class="ackbox">By signing, the customer acknowledges receiving a copy of this Bill of Lading and the "Your Rights and Responsibilities When You Move" booklet, agrees to the terms and the valuation option selected above, and confirms the goods/exceptions as noted. The foreman signs on behalf of Rushmore Van Lines.</div>
+   <div class="bolsec"><h4><span class="step">10</span> Signatures — collect all required <span class="req">*</span></h4>
+     <div class="ackbox">The packet is signed at <b>each</b> acknowledgement, not just once. The customer draws their signature one time below, then taps <b>Apply to all</b> to place it on every required point; the foreman does the same. Each gets its own timestamp. (Delivery acknowledgements are signed at delivery.)</div>
      <label class="chk"><input type="checkbox" id="b_consent"> <span>The customer consents to sign this Bill of Lading electronically on this device. <span class="req">*</span></span></label>
-     <div style="margin-top:10px"><div class="padlbl"><b>Customer signature</b> — ${esc(e.customer)} <span class="req">*</span></div>
-       <div class="padwrap"><canvas class="pad" id="b_custSig"></canvas><button class="padclear" type="button" onclick="padClear('b_custSig')">Clear</button></div></div>
-     <div style="margin-top:12px"><div class="padlbl"><b>Foreman signature</b> — ${esc(job.foreman?job.foreman.name:'foreman')} (Rushmore) <span class="req">*</span></div>
-       <div class="padwrap"><canvas class="pad" id="b_foreSig"></canvas><button class="padclear" type="button" onclick="padClear('b_foreSig')">Clear</button></div></div>
+     <div class="twocol" style="margin-top:10px">
+       <div><div class="padlbl"><b>Customer — sign once</b> · ${esc(e.customer)}</div>
+         <div class="padwrap"><canvas class="pad" id="b_custSig"></canvas><button class="padclear" type="button" onclick="padClear('b_custSig')">Clear</button></div>
+         <button class="sm" style="margin-top:6px;width:100%" onclick="applyAll('cust')">↧ Apply customer signature to all</button></div>
+       <div><div class="padlbl"><b>Foreman — sign once</b> · ${esc(job.foreman?job.foreman.name:'foreman')}</div>
+         <div class="padwrap"><canvas class="pad" id="b_foreSig"></canvas><button class="padclear" type="button" onclick="padClear('b_foreSig')">Clear</button></div>
+         <button class="sm" style="margin-top:6px;width:100%" onclick="applyAll('carrier')">↧ Apply foreman signature to all</button></div></div>
+     <div class="subh" style="margin-top:14px">Required signatures (tap “Sign” to apply individually)</div>
+     <div id="sigList"></div>
+     <p class="muted" id="sigCount" style="margin-top:4px"></p>
      <div class="btnrow"><button onclick="generateBOL('${job.id}')">✅ Sign &amp; generate Bill of Lading</button><button class="ghost" onclick="openFmJob('${job.id}')">Cancel</button></div>
-     <p class="muted" style="margin-top:10px">Captures timestamp, device &amp; (if allowed) location for the audit trail. Next: this becomes the real 5-page PDF and is emailed to the customer (Phase 2–3).</p></div>`;
-  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');if(s.custSig)padRestore('b_custSig',s.custSig);if(s.foreSig)padRestore('b_foreSig',s.foreSig);},30);
+     <p class="muted" style="margin-top:8px">Captures timestamp, device &amp; (if allowed) location for the audit trail.</p></div>`;
+  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');window._sigState={ack:{}};renderSigList();},30);
   window.scrollTo(0,0);
 }
+const SIGPTS=[
+ {key:'valuation',label:'Valuation election',who:['cust']},
+ {key:'documents',label:'Documents & "Rights and Responsibilities" booklet received',who:['cust']},
+ {key:'bolReceipt',label:'Bill of Lading receipt acknowledgement',who:['cust','carrier']},
+ {key:'pickup',label:'Pick-up acknowledgement (authority & charges)',who:['cust','carrier']},
+ {key:'accessorial',label:'Accessorial & post-contract services (AS-22)',who:['cust','carrier']},
+ {key:'ldf',label:'Long Distance Form (LDF-08)',who:['cust']},
+ {key:'pms',label:'Packing & materials / bulky (PMS-19)',who:['cust','carrier']}];
+function sigLabel(pt){if(pt.key==='valuation'){const v=(document.querySelector('input[name=b_val]:checked')||{}).value;return 'Valuation election — '+(v==='full'?'Option 1, Full Value':'Option 2, 60¢/lb waiver');}return pt.label;}
+function applySig(key,who){const d=who==='cust'?padData('b_custSig'):padData('b_foreSig');if(!d){alert('Draw the '+(who==='cust'?'customer':'foreman')+' signature first.');return;}const st=window._sigState=window._sigState||{ack:{}};st.ack[key]=st.ack[key]||{};st.ack[key][who]={img:d,ts:now()};renderSigList();}
+function applyAll(who){const d=who==='cust'?padData('b_custSig'):padData('b_foreSig');if(!d){alert('Draw the '+(who==='cust'?'customer':'foreman')+' signature first.');return;}const st=window._sigState=window._sigState||{ack:{}};SIGPTS.forEach(pt=>{if(pt.who.includes(who)){st.ack[pt.key]=st.ack[pt.key]||{};st.ack[pt.key][who]={img:d,ts:now()};}});renderSigList();}
+function renderSigList(){const st=window._sigState=window._sigState||{ack:{}};const el=document.getElementById('sigList');if(!el)return;let need=0,have=0;
+  el.innerHTML=SIGPTS.map(pt=>{const a=st.ack[pt.key]||{};const slots=pt.who.map(w=>{need++;const sg=a[w];if(sg)have++;const who=w==='cust'?'Customer':'Foreman';
+    return `<div class="sigslot ${sg?'on':''}"><span class="who">${who}</span>${sg?`<img src="${sg.img}"><span class="ts">${(sg.ts.split(',')[1]||'').trim()}</span>`:`<button class="sigbtn" onclick="applySig('${pt.key}','${w}')">Sign</button>`}</div>`;}).join('');
+    return `<div class="sigcard"><div class="sct">${esc(sigLabel(pt))}</div><div class="sigslots">${slots}</div></div>`;}).join('');
+  const c=document.getElementById('sigCount');if(c)c.innerHTML=`<b>${have} of ${need}</b> required signatures collected.`+(have<need?' Draw each signature once, then tap “Apply to all”.':' ✓ All set.');}
 function bolSel(el){[...el.parentNode.querySelectorAll('.opt')].forEach(o=>o.classList.remove('sel'));el.classList.add('sel');el.querySelector('input').checked=true;}
 function padSetup(id){const c=document.getElementById(id);if(!c)return;const r=c.getBoundingClientRect();const dpr=window.devicePixelRatio||1;c.width=Math.max(1,r.width*dpr);c.height=Math.max(1,r.height*dpr);const ctx=c.getContext('2d');ctx.scale(dpr,dpr);ctx.lineWidth=2.2;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#13294b';c.dataset.drawn='';let drawing=false,last=null;
   const pos=ev=>{const b=c.getBoundingClientRect();const t=(ev.touches&&ev.touches[0])||ev;return{x:t.clientX-b.left,y:t.clientY-b.top};};
@@ -792,9 +821,12 @@ function padRestore(id,url){const c=document.getElementById(id);if(!c)return;con
 function padData(id){const c=document.getElementById(id);return c&&c.dataset.drawn?c.toDataURL('image/png'):'';}
 function generateBOL(id){const v=s=>{const el=document.getElementById(s);return el?el.value.trim():'';};const ck=s=>{const el=document.getElementById(s);return!!(el&&el.checked);};
   const val=(document.querySelector('input[name=b_val]:checked')||{}).value||'';
-  const cust=padData('b_custSig'),fore=padData('b_foreSig');const miss=[];
-  if(!v('b_actualPickup'))miss.push('actual pick-up date');if(!val)miss.push('valuation option');if(!ck('b_consent'))miss.push('customer consent');if(!cust)miss.push('customer signature');if(!fore)miss.push('foreman signature');
+  const st=window._sigState||{ack:{}};const miss=[];
+  if(!v('b_actualPickup'))miss.push('actual pick-up date');if(!val)miss.push('valuation option');if(!ck('b_consent'))miss.push('customer consent');
+  let sigMiss=0;SIGPTS.forEach(pt=>pt.who.forEach(w=>{if(!(st.ack[pt.key]&&st.ack[pt.key][w]))sigMiss++;}));
+  if(sigMiss)miss.push(sigMiss+' signature(s) still needed');
   if(miss.length){alert('Please complete: '+miss.join(', '));return;}
+  const cust=padData('b_custSig'),fore=padData('b_foreSig');
   const job=getJob(id);if(!job)return;
   const bol=Object.assign({},_bolSeed||{},{
     usdot:v('b_usdot'),mc:v('b_mc'),order:v('b_order'),vanNo:v('b_van'),crew:v('b_crew'),interliner:v('b_interliner'),
@@ -811,7 +843,7 @@ function generateBOL(id){const v=s=>{const el=document.getElementById(s);return 
     fullPack:ck('b_fullPack'),materialsNote:v('b_materialsNote'),packTotal:v('b_packTotal'),
     storage:ck('b_storage'),storageStart:v('b_storageStart'),storageEnd:v('b_storageEnd'),ttAccess:ck('b_ttAccess'),dwellingO:v('b_dwellingO'),dwellingD:v('b_dwellingD'),walkupFlights:v('b_walkupFlights'),accessDenied:ck('b_accessDenied'),accessExplain:v('b_accessExplain'),
     exceptions:v('b_exceptions'),originAmt:v('b_payOrigin'),
-    consent:true,custSig:cust,foreSig:fore,signed:true,signedAt:now(),device:(navigator.userAgent||'').slice(0,70),geo:window._geo||null});
+    sigs:st.ack,consent:true,custSig:cust,foreSig:fore,signed:true,signedAt:now(),device:(navigator.userAgent||'').slice(0,70),geo:window._geo||null});
   job.bol=bol;saveJob(job);renderBOLDone(id);}
 function renderBOLDone(id){const job=getJob(id);const e=job.est||{},b=job.bol||{};const valLbl=b.valuation==='full'?'Option 1 — Full Value Protection':'Option 2 — Waiver (60¢/lb)';
   $('#app').innerHTML=`<div class="modebar">FOREMAN PORTAL</div>
@@ -823,9 +855,8 @@ function renderBOLDone(id){const job=getJob(id);const e=job.est||{},b=job.bol||{
        <div class="f"><label class="fl">Van # · crew</label><span class="v">${esc(b.vanNo||'—')} · ${esc(b.crew||'—')}</span></div>
        <div class="f"><label class="fl">Origin payment</label><span class="v">${b.originAmt?money(num(b.originAmt)):'—'} ${b.method?'· '+esc(b.method):''}</span></div>
        <div class="f"><label class="fl">Exceptions</label><span class="v">${esc(b.exceptions||'none noted')}</span></div></div>
-     <div class="twocol" style="margin-top:12px">
-       <div class="f"><label class="fl">Customer signature</label>${b.custSig?`<img class="sigimg" src="${b.custSig}">`:'—'}</div>
-       <div class="f"><label class="fl">Foreman signature</label>${b.foreSig?`<img class="sigimg" src="${b.foreSig}">`:'—'}</div></div>
+     <h3 class="sg" style="margin-top:14px">Signatures collected</h3>
+     ${SIGPTS.map(pt=>{const a=(b.sigs||{})[pt.key]||{};const signed=pt.who.filter(w=>a[w]).map(w=>w==='cust'?'Customer':'Foreman');return `<div class="note"><b>${esc(pt.label)}:</b> ${signed.length?signed.join(' + ')+' ✓':'<span style=\"color:#b9770e\">pending (delivery)</span>'}</div>`;}).join('')}
      <div class="ackbox" style="margin-top:14px">📄 <b>Next (Phase 2–3):</b> this signed data becomes the real 5-page PDF Bill of Lading and is emailed to the customer + stored. Those steps run on the backend.</div>
      <div class="btnrow"><button class="ghost" onclick="openBOL('${job.id}')">Re-open / edit</button><button onclick="openFmJob('${job.id}')">Done → back to job</button></div></div>`;
   window.scrollTo(0,0);
