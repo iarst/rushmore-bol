@@ -105,6 +105,11 @@
   .sigbtn{padding:5px 13px;font-size:12px}
   .sigblock{border:1px solid #bcdceb;border-left:4px solid var(--teal);border-radius:0 10px 10px 0;background:#f4fafd;padding:11px 14px;margin:-8px 0 16px}
   .sigblock .sct{display:flex;align-items:center;gap:6px} .sigack{font-size:12px;color:#3a5566;margin:3px 0 8px;line-height:1.45}
+  /* signed BOL document */
+  .docack{margin:8px 0 16px} .dackt{font-size:11.5px;color:#555;margin-bottom:6px;line-height:1.45}
+  .docsigs{display:flex;gap:24px;flex-wrap:wrap}
+  .docsig{flex:1;min-width:180px} .docsig img{height:44px;display:block;margin-bottom:-3px} .docsigln{border-top:1px solid #9aa3af;font-size:10.5px;color:#555;padding-top:3px}
+  .doctbl{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0} .doctbl td{padding:4px 6px;border-bottom:1px solid var(--line)} .doctbl td.r{text-align:right} .doctbl tr.tot td{font-weight:800;color:var(--navy);border-top:2px solid var(--navy)}
   @media print{header.app,.noprint{display:none!important} body{background:#fff} .wrap{padding:0;max-width:100%} .card{box-shadow:none;border:0;padding:0}}
   @media(max-width:640px){.grid,.rooms{grid-template-columns:1fr}}
 </style>
@@ -506,7 +511,7 @@ function vJob(){
       ${j.eta?'':`<div class="banner info" style="margin-top:14px">Waiting for ${esc(j.foreman.name.split(' ')[0])} to sign in and confirm a 3-hour pickup window…</div>`}</div>`;
   }
   return `<div class="modebar">OFFICE</div><div class="steps"><span class="s done">1. Intake</span><span class="s ${j.foreman?'done':'on'}">2. Assign foreman</span><span class="s ${j.eta?'done':(j.foreman?'on':'')}">3. Pickup window</span></div>
-    <div class="card"><div style="display:flex;align-items:center;gap:10px"><h2 style="margin:0">Job ${j.id}</h2>${statusPill(j.status)}<button class="ghost sm right" onclick="openJobSheet('${j.id}','office')">📄 Job sheet</button><button class="ghost sm" onclick="goOffice()">← Board</button></div>
+    <div class="card"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">Job ${j.id}</h2>${statusPill(j.status)}${j.bol&&j.bol.signed?`<button class="sm right" onclick="openBOLDoc('${j.id}')">📄 Signed BOL</button><button class="ghost sm" onclick="openJobSheet('${j.id}','office')">Job sheet</button>`:`<button class="ghost sm right" onclick="openJobSheet('${j.id}','office')">📄 Job sheet</button>`}<button class="ghost sm" onclick="goOffice()">← Board</button></div>
     ${j.eta?`<div class="banner ok" style="margin-top:12px">✓ Pickup window confirmed: <span class="eta">${esc(j.eta.whenLabel)}</span>${j.eta.note?' — '+esc(j.eta.note):''}<small>by ${esc(j.foreman?j.foreman.name:'')} · ${j.eta.submittedAt}</small></div>`:''}
     <p class="sub" style="margin-top:6px">Read by the AI from the broker estimate${e.rep?' · broker rep '+esc(e.rep):''}.</p>
     ${extrasHTML(e)}
@@ -563,7 +568,7 @@ function renderFmJob(id,fromLink){
    <div class="card fmwrap"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="pill p-info">FOREMAN</span><h2 style="margin:0">Pickup — Job ${job.id}</h2>
      <button class="ghost sm right" onclick="openJobSheet('${job.id}','foreman')">📄 Job sheet</button><button class="ghost sm" onclick="goForeman()">My jobs</button></div>
     ${done?`<div class="banner ok" style="margin-top:12px">✓ Pickup window confirmed: <span class="eta">${esc(job.eta.whenLabel)}</span>${job.eta.note?' — '+esc(job.eta.note):''}<small>confirmed ${job.eta.submittedAt}</small></div>`:''}
-    ${job.bol&&job.bol.signed?`<div class="banner ok" style="margin-top:12px">✅ Bill of Lading signed by ${esc(e.customer)} &amp; ${esc(job.foreman?job.foreman.name:'foreman')}<small>${job.bol.signedAt} · <a href="javascript:void(0)" onclick="openBOL('${job.id}')">view / re-open</a></small></div>`:`<div class="banner info" style="margin-top:12px">📝 On site? <a href="javascript:void(0)" onclick="openBOL('${job.id}')"><b>Fill &amp; sign the Bill of Lading →</b></a></div>`}
+    ${job.bol&&job.bol.signed?`<div class="banner ok" style="margin-top:12px">✅ Bill of Lading signed by ${esc(e.customer)} &amp; ${esc(job.foreman?job.foreman.name:'foreman')}<small>${job.bol.signedAt} · <a href="javascript:void(0)" onclick="openBOLDoc('${job.id}')"><b>📄 view / print BOL</b></a> · <a href="javascript:void(0)" onclick="openBOL('${job.id}')">edit</a></small></div>`:`<div class="banner info" style="margin-top:12px">📝 On site? <a href="javascript:void(0)" onclick="openBOL('${job.id}')"><b>Fill &amp; sign the Bill of Lading →</b></a></div>`}
     <p class="sub" style="margin-top:6px">Assigned to ${esc(job.foreman?job.foreman.name:'you')}. Review the job &amp; inventory${done?'.':', then confirm your 3-hour pickup window.'}</p>
     <div class="volbar"><div class="vb"><span class="n">${e.volume} cf</span><span class="l">Volume</span></div>
       <div class="vb"><span class="n">${e.inv?e.inv.totalPieces:'—'}</span><span class="l">Pieces</span></div>
@@ -873,8 +878,62 @@ function renderBOLDone(id){const job=getJob(id);const e=job.est||{},b=job.bol||{
        <div class="f"><label class="fl">Exceptions</label><span class="v">${esc(b.exceptions||'none noted')}</span></div></div>
      <h3 class="sg" style="margin-top:14px">Signatures collected</h3>
      ${SIGPTS.map(pt=>{const a=(b.sigs||{})[pt.key]||{};const signed=pt.who.filter(w=>a[w]).map(w=>w==='cust'?'Customer':'Foreman');return `<div class="note"><b>${esc(pt.label)}:</b> ${signed.length?signed.join(' + ')+' ✓':'<span style=\"color:#b9770e\">pending (delivery)</span>'}</div>`;}).join('')}
-     <div class="ackbox" style="margin-top:14px">📄 <b>Next (Phase 2–3):</b> this signed data becomes the real 5-page PDF Bill of Lading and is emailed to the customer + stored. Those steps run on the backend.</div>
-     <div class="btnrow"><button class="ghost" onclick="openBOL('${job.id}')">Re-open / edit</button><button onclick="openFmJob('${job.id}')">Done → back to job</button></div></div>`;
+     <div class="ackbox" style="margin-top:14px">📄 View the completed Bill of Lading below — print it or save as PDF. (In Phase 3 the backend emails this to the customer + stores it automatically.)</div>
+     <div class="btnrow"><button onclick="openBOLDoc('${job.id}')">📄 View / print Bill of Lading</button><button class="ghost" onclick="openBOL('${job.id}')">Re-open / edit</button><button class="ghost" onclick="openFmJob('${job.id}')">Back to job</button></div></div>`;
+  window.scrollTo(0,0);
+}
+function openBOLDoc(id){renderBOLDoc(id);}
+function bolMoney(x){return money(num(x)||0);}
+function sigLabelDoc(b,key){if(key==='valuation')return 'Valuation election — '+(b.valuation==='full'?'Option 1, Full Value':'Option 2, 60¢/lb waiver');const pt=SIGPTS.find(p=>p.key===key);return pt?pt.label:key;}
+function docSig(b,key){const pt=SIGPTS.find(p=>p.key===key);if(!pt)return '';const a=(b.sigs||{})[key]||{};
+  return `<div class="docack"><div class="dackt"><b>${esc(sigLabelDoc(b,key))}.</b> ${esc(SIG_TEXT[key]||'')}</div><div class="docsigs">${pt.who.map(w=>{const sg=a[w];const who=w==='cust'?"Customer's signature &amp; date":"Carrier / foreman signature &amp; date";return `<div class="docsig">${sg?`<img src="${sg.img}">`:'<div style="height:44px"></div>'}<div class="docsigln">${who}${sg?' · '+esc(sg.ts):''}</div></div>`;}).join('')}</div></div>`;}
+function renderBOLDoc(id){const j=getJob(id);if(!j||!j.bol){goForeman();return;}const e=j.est||{},b=j.bol;
+  const back=getFm()?`openFmJob('${id}')`:`openJob('${id}')`;
+  const acc=[['Stairs',b.locStairs,b.chStairs],['Elevator',b.locElevator,b.chElevator],['Long carry',b.locLongCarry,b.chLongCarry],['Shuttle',b.locShuttle,b.chShuttle],['Storage in transit',b.locSIT,b.chSIT],['Storage handling',b.locStgHandling,b.chStgHandling],['Extra labor',b.locExtraLabor,b.chExtraLabor],['Extra stop',b.locExtraStop,b.chExtraStop],['Waiting / overnight',b.locWaiting,b.chWaiting]];
+  const accRows=acc.filter(a=>num(a[2])).map(a=>`<tr><td>${a[0]}${a[1]&&a[1]!=='—'?' ('+esc(a[1])+')':''}</td><td class="r">${bolMoney(a[2])}</td></tr>`).join('');
+  $('#app').innerHTML=`<div class="btnrow noprint" style="margin:0 0 12px"><button class="ghost sm" onclick="${back}">← Back</button><button class="sm" onclick="window.print()">🖨️ Print / Save PDF</button></div>
+   <div class="card" id="sheetdoc">
+     <div class="sampleband">PROTOTYPE · electronic Bill of Lading — signed ${esc(b.signedAt||'')}</div>
+     <div class="sheethead"><div><div class="brand">RUSHMORE VAN LINES</div><div class="muted">Interstate Bill of Lading · DOT ${esc(b.usdot||'')} · ICC/MC ${esc(b.mc||'')}</div></div>
+       <div style="text-align:right"><div style="font-weight:800;font-size:16px">Job ${esc(b.order||j.id)}</div><div class="muted">Van ${esc(b.vanNo||'—')} · pickup ${esc(b.actualPickup||'')}</div></div></div>
+     <div class="grid" style="margin-top:12px">
+       <div class="f"><label class="fl">Origin</label><span class="v">${esc(b.oName||e.customer)}</span><span>${esc(b.oStreet)}, ${esc(b.oCSZ)}</span><span class="muted">${esc(b.oPhone||'')}</span></div>
+       <div class="f"><label class="fl">Destination</label><span class="v">${esc(b.dName||e.customer)}</span><span>${esc(b.dStreet)}, ${esc(b.dCSZ)}</span><span class="muted">${esc(b.dPhone||'')}</span></div></div>
+     <h3 class="sg" style="margin-top:14px">Valuation</h3>
+     <div class="note">${b.valuation==='full'?'Option 1 — Full (Replacement) Value Protection'+(num(b.declaredValue)?' · declared value '+bolMoney(b.declaredValue):''):'Option 2 — Waiver, Released Value 60¢ / lb per article'}</div>
+     ${docSig(b,'valuation')}
+     <h3 class="sg" style="margin-top:6px">Services &amp; charges</h3>
+     <table class="doctbl"><tbody>
+       <tr><td>Transportation (${esc(e.volume)} cf @ $${esc(e.rate)})</td><td class="r">${bolMoney(b.chTransport)}</td></tr>
+       ${num(b.chFuel)?`<tr><td>Fuel surcharge</td><td class="r">${bolMoney(b.chFuel)}</td></tr>`:''}
+       ${num(b.chPacking)?`<tr><td>Packing labor &amp; materials</td><td class="r">${bolMoney(b.chPacking)}</td></tr>`:''}
+       ${num(b.chBulky)?`<tr><td>Bulky articles</td><td class="r">${bolMoney(b.chBulky)}</td></tr>`:''}
+       ${accRows}
+       ${num(b.chConvPGS)?`<tr><td>Convenience fee + PGS delivery</td><td class="r">${bolMoney(b.chConvPGS)}</td></tr>`:''}
+       ${num(b.chBinding)?`<tr><td>Binding estimate fee</td><td class="r">${bolMoney(b.chBinding)}</td></tr>`:''}
+       ${num(b.chOther)?`<tr><td>Other</td><td class="r">${bolMoney(b.chOther)}</td></tr>`:''}
+       <tr class="tot"><td>TOTAL APPLICABLE CHARGES</td><td class="r">${bolMoney(b.chTotal)}</td></tr>
+     </tbody></table>
+     ${docSig(b,'accessorial')}
+     <h3 class="sg" style="margin-top:6px">Payment</h3>
+     <table class="doctbl"><tbody>
+       <tr><td>Prepaid deposit</td><td class="r">${bolMoney(b.payDeposit)}</td></tr>
+       <tr><td>Origin payment collected${b.method?' ('+esc(b.method)+')':''}</td><td class="r">${bolMoney(b.payOrigin)}</td></tr>
+       <tr><td>Balance due at destination</td><td class="r">${bolMoney(b.payBalanceDest)}</td></tr>
+     </tbody></table>
+     ${docSig(b,'documents')}
+     ${docSig(b,'bolReceipt')}
+     ${docSig(b,'pickup')}
+     <h3 class="sg" style="margin-top:6px">Long Distance Form (LDF-08)</h3>
+     <div class="note">Storage: ${b.storage?'Yes ('+esc(b.storageStart)+' – '+esc(b.storageEnd)+')':'No'} · Tractor-trailer access: ${b.ttAccess?'Yes':'No'} · Origin ${esc(b.dwellingO)} · Destination ${esc(b.dwellingD)}${b.accessExplain?' · Access notes: '+esc(b.accessExplain):''}</div>
+     ${docSig(b,'ldf')}
+     <h3 class="sg" style="margin-top:6px">Packing &amp; materials (PMS-19)</h3>
+     <div class="note">Full packing: ${b.fullPack?'Yes':'No'}${b.materialsNote?' · '+esc(b.materialsNote):''}${num(b.packTotal)?' · total '+bolMoney(b.packTotal):''}</div>
+     ${docSig(b,'pms')}
+     <h3 class="sg" style="margin-top:6px">Condition &amp; exceptions</h3>
+     <div class="note">${esc(b.exceptions||'None noted at pickup.')}</div>
+     <p class="muted" style="margin-top:12px">Audit trail — signed ${esc(b.signedAt||'')}${b.geo?' · GPS '+b.geo.lat+', '+b.geo.lng:''} · ${esc(b.device||'')}</p>
+   </div>`;
   window.scrollTo(0,0);
 }
 
