@@ -50,6 +50,7 @@
   .volbar .vb{display:flex;flex-direction:column} .volbar .vb .n{font-size:18px;font-weight:800;color:var(--navy)} .volbar .vb .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700}
   .agday{font-weight:800;color:var(--navy);margin:16px 0 8px;font-size:12.5px;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--line);padding-bottom:5px}
   .agtime{font-weight:800;color:var(--navy);min-width:118px;font-size:13px}
+  .paybar{background:#e7f6ef;border:1px solid #bfe6d4;border-radius:10px;padding:11px 15px;margin:0 0 14px;font-size:15px;color:#0f6e56} .paybar b{font-size:18px} .paybar .sm2{font-size:12px;color:#3a7a63}
   /* inventory */
   .chips{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 8px}
   .chip{background:#eef2f7;color:var(--navy);border-radius:20px;padding:4px 11px;font-size:12px;font-weight:700}
@@ -83,6 +84,12 @@ function setFm(e){window._fm=e;try{e?localStorage.setItem('rvl_fm',e):localStora
 const $=s=>document.querySelector(s);
 const money=n=>(n<0?'-$':'$')+Math.abs(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const num=v=>{if(v===''||v==null)return null;const n=parseFloat(String(v).replace(/[$,]/g,''));return isNaN(n)?null:n;};
+function payments(e){const total=+(e&&e.total)||0,dep=+(e&&e.deposit)||0;const bal=Math.round((total-dep)*100)/100;const atPickup=Math.round(bal/2*100)/100;return {total,dep,bal,atPickup,atDelivery:Math.round((bal-atPickup)*100)/100};}
+function paymentRows(e){const p=payments(e);return `<div class="kv"><span class="k">Total</span><span>${money(p.total)}</span></div>
+  <div class="kv"><span class="k">Deposit (paid at booking)</span><span>−${money(p.dep)}</span></div>
+  <div class="kv"><span class="k" style="font-weight:700">Balance (total − deposit)</span><span style="font-weight:700">${money(p.bal)}</span></div>
+  <div class="kv"><span class="k">💵 Collect at pickup (½ of balance)</span><span style="font-weight:800;color:var(--navy)">${money(p.atPickup)}</span></div>
+  <div class="kv"><span class="k">Due at delivery (remaining ½)</span><span>${money(p.atDelivery)}</span></div>`;}
 const now=()=>new Date().toLocaleString();
 const enc=o=>btoa(unescape(encodeURIComponent(JSON.stringify(o))));
 const dec=s=>JSON.parse(decodeURIComponent(escape(atob(s))));
@@ -279,11 +286,11 @@ function vJob(){
       <h3 class="sg" style="margin-top:16px">Foreman link <span class="muted">(email it to ${esc(j.foreman.name.split(' ')[0])})</span></h3><div class="linkbox">${link}</div>
       <div class="btnrow"><button class="sm" onclick="copyLink()">📋 Copy link</button><a href="${mailto}"><button class="sm ghost" type="button">✉️ Email link</button></a>
         <button class="ghost sm" onclick="location.hash='fm='+enc(cur)">Open as foreman →</button></div>
-      ${j.eta?`<div class="banner ok" style="margin-top:14px">✓ Pickup window confirmed: <span class="eta">${esc(j.eta.whenLabel)}</span>${j.eta.note?' — '+esc(j.eta.note):''}<small>confirmed ${j.eta.submittedAt} by ${esc(j.foreman.name)}</small></div>`
-        :`<div class="banner info" style="margin-top:14px">Waiting for ${esc(j.foreman.name.split(' ')[0])} to sign in and confirm a 3-hour pickup window…</div>`}</div>`;
+      ${j.eta?'':`<div class="banner info" style="margin-top:14px">Waiting for ${esc(j.foreman.name.split(' ')[0])} to sign in and confirm a 3-hour pickup window…</div>`}</div>`;
   }
   return `<div class="modebar">OFFICE</div><div class="steps"><span class="s done">1. Intake</span><span class="s ${j.foreman?'done':'on'}">2. Assign foreman</span><span class="s ${j.eta?'done':(j.foreman?'on':'')}">3. Pickup window</span></div>
     <div class="card"><div style="display:flex;align-items:center;gap:10px"><h2 style="margin:0">Job ${j.id}</h2>${statusPill(j.status)}<button class="ghost sm right" onclick="openJobSheet('${j.id}','office')">📄 Job sheet</button><button class="ghost sm" onclick="goOffice()">← Board</button></div>
+    ${j.eta?`<div class="banner ok" style="margin-top:12px">✓ Pickup window confirmed: <span class="eta">${esc(j.eta.whenLabel)}</span>${j.eta.note?' — '+esc(j.eta.note):''}<small>by ${esc(j.foreman?j.foreman.name:'')} · ${j.eta.submittedAt}</small></div>`:''}
     <p class="sub" style="margin-top:6px">Read by the AI from the broker estimate${e.rep?' · broker rep '+esc(e.rep):''}.</p>
     <div class="grid"><div class="f"><label class="fl">Customer</label><span class="v">${esc(e.customer)}</span></div>
       <div class="f"><label class="fl">Contact</label><span class="v">${esc(e.phone)||''} · ${esc(e.email)||''}</span></div>
@@ -293,8 +300,9 @@ function vJob(){
       <div class="f"><label class="fl">Requested pickup · delivery</label><span class="v">${esc(e.pickup)} · ${esc(e.delivery)}${e.firstDelivery?' (1st avail '+esc(e.firstDelivery)+')':''}</span></div></div>
     <h3 class="sg" style="margin-top:14px">Estimate summary</h3>
     <div class="kv"><span class="k">Volume · rate</span><span>${e.volume} cf @ $${e.rate}</span></div>
-    <div class="kv"><span class="k">Total · deposit</span><span>${money(e.total)} · ${money(e.deposit)}</span></div>
     <div class="kv"><span class="k">Valuation</span><span>${esc(e.valuation)}</span></div>
+    <h3 class="sg" style="margin-top:16px">💵 Payment</h3>
+    ${paymentRows(e)}
     <h3 class="sg" style="margin-top:16px">📦 Inventory ${e.inv?`<span class="muted" style="font-weight:600">· ${e.inv.totalPieces} pieces</span>`:''}</h3>
     ${inventoryHTML(e.inv)}</div>${assignBlock}`;
 }
@@ -342,12 +350,15 @@ function renderFmJob(id,fromLink){
       <div class="vb"><span class="n">${e.inv?e.inv.totalPieces:'—'}</span><span class="l">Pieces</span></div>
       <div class="vb"><span class="n">${e.miles||'—'}</span><span class="l">Miles</span></div>
       <div class="vb"><span class="n">${esc(e.pickup||'—')}</span><span class="l">Move dates</span></div></div>
+    <div class="paybar">💵 Collect at pickup: <b>${money(payments(e).atPickup)}</b> <span class="sm2">— half of balance ${money(payments(e).bal)}; remaining ${money(payments(e).atDelivery)} due at delivery</span></div>
     <div class="grid"><div class="f"><label class="fl">Customer</label><span class="v">${esc(e.customer)}</span></div>
       <div class="f"><label class="fl">Phone</label><span class="v">${esc(e.phone)||''}</span></div>
       <div class="f"><label class="fl">Pickup${e.oType?' · '+esc(e.oType):''}</label><span class="v">${esc(e.oAddr)}</span></div>
       <div class="f"><label class="fl">Deliver to${e.dType?' · '+esc(e.dType):''}</label><span class="v">${esc(e.dAddr)}</span></div>
       <div class="f"><label class="fl">Move</label><span class="v">Long distance${e.miles?' · '+esc(e.miles)+' mi':''}</span></div>
       <div class="f"><label class="fl">Move dates</label><span class="v">${esc(e.pickup)}</span></div></div>
+    <h3 class="sg" style="margin-top:14px">💵 Payment</h3>
+    ${paymentRows(e)}
    </div>
    <div class="card"><h3 class="sg">📦 Inventory — what to expect ${e.inv?`<span class="muted" style="font-weight:600">· ${e.inv.totalPieces} pieces</span>`:''}</h3>
      ${inventoryHTML(e.inv)}</div>
@@ -402,8 +413,9 @@ function renderJobSheet(id,mode){
        <div class="f"><label class="fl">Foreman</label><span class="v">${esc(j.foreman?j.foreman.name:'—')}</span></div></div>
      <h3 class="sg" style="margin-top:14px">Charges</h3>
      <div class="kv"><span class="k">Transportation (${e.volume} cf @ $${e.rate})</span><span>${money(e.basic)}</span></div>
-     <div class="kv"><span class="k">Total applicable charges</span><span style="font-weight:800">${money(e.total)}</span></div>
-     <div class="kv"><span class="k">Prepaid deposit · valuation</span><span>${money(e.deposit)} · ${esc(e.valuation)}</span></div>
+     <div class="kv"><span class="k">Total applicable charges · valuation</span><span>${money(e.total)} · ${esc(e.valuation)}</span></div>
+     <h3 class="sg" style="margin-top:14px">💵 Payment</h3>
+     ${paymentRows(e)}
      <h3 class="sg" style="margin-top:16px">📋 Extra notes for the team</h3>
      ${notes.map(n=>`<div class="note"><b>${esc(n[0])}:</b> ${esc(n[1])}</div>`).join('')}
      <h3 class="sg" style="margin-top:16px">📦 Inventory ${e.inv?'· '+e.inv.totalPieces+' pieces':''}</h3>
