@@ -46,6 +46,8 @@
   .fmcard{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fbfcfe}
   .av{width:38px;height:38px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
   .fmwrap{border-top:4px solid var(--teal)}
+  .volbar{display:flex;gap:18px;flex-wrap:wrap;background:#eef6fb;border:1px solid #cfe2f3;border-radius:10px;padding:11px 15px;margin:6px 0 14px}
+  .volbar .vb{display:flex;flex-direction:column} .volbar .vb .n{font-size:18px;font-weight:800;color:var(--navy)} .volbar .vb .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700}
   /* inventory */
   .chips{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 8px}
   .chip{background:#eef2f7;color:var(--navy);border-radius:20px;padding:4px 11px;font-size:12px;font-weight:700}
@@ -216,7 +218,7 @@ function inventoryHTML(inv){
 /* ---------- helpers ---------- */
 function saveJob(job){const jobs=store.get();const i=jobs.findIndex(j=>j.id===job.id);const c=JSON.parse(JSON.stringify(job));if(i>=0)jobs[i]=c;else jobs.unshift(c);store.set(jobs);}
 function getJob(id){return store.get().find(j=>j.id===id);}
-function statusPill(s){const m={New:'p-grey',Assigned:'p-info','Awaiting pickup':'p-warn'};return '<span class="pill '+(m[s]||'p-grey')+'">'+s+'</span>';}
+function statusPill(s){if(s==='Awaiting pickup')s='Scheduled';const m={New:'p-grey',Assigned:'p-info',Scheduled:'p-ok'};return '<span class="pill '+(m[s]||'p-grey')+'">'+s+'</span>';}
 function foremanLink(j){return location.origin+location.pathname+'#fm='+enc(j);}
 
 /* ---------- router & nav ---------- */
@@ -240,11 +242,11 @@ function vDashboard(){
       <div class="meta">${esc((j.est?.oAddr||'').split(',')[1]||'')} → ${esc((j.est?.dAddr||'').split(',')[1]||'')} ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} ${j.foreman?'· '+esc(j.foreman.name):''} ${j.eta?'· '+esc(j.eta.whenLabel):''}</div></div>
       <div class="right">${statusPill(j.status)}</div></div>`).join('')
     :'<div class="empty">No jobs yet. Click <b>+ New job</b> to bring one in from a broker estimate.</div>';
-  const c={New:0,Assigned:0,'Awaiting pickup':0};jobs.forEach(j=>c[j.status]=(c[j.status]||0)+1);
+  const c={New:0,Assigned:0,Scheduled:0};jobs.forEach(j=>{const st=j.status==='Awaiting pickup'?'Scheduled':j.status;c[st]=(c[st]||0)+1;});
   return `<div class="modebar">OFFICE · DISPATCH BOARD</div>
     <div class="card"><h2>Dispatch board</h2><p class="sub">Estimate in → assign a foreman → he confirms a 3-hour pickup window.</p>
     <div class="btnrow" style="margin:0 0 14px"><button onclick="newJob()">+ New job from estimate</button>
-    <span class="right" style="align-self:center"><span class="pill p-grey">${c.New||0} new</span> <span class="pill p-info">${c.Assigned||0} assigned</span> <span class="pill p-warn">${c['Awaiting pickup']||0} confirmed</span></span></div>
+    <span class="right" style="align-self:center"><span class="pill p-grey">${c.New||0} new</span> <span class="pill p-info">${c.Assigned||0} assigned</span> <span class="pill p-ok">${c.Scheduled||0} scheduled</span></span></div>
     <div class="joblist">${rows}</div></div>
     <div class="card"><p class="muted" style="margin:0">Prototype · steps 1–3 · runs in your browser, data saved locally on this device. Foreman accounts &amp; cross-device sync are simulated; the real version needs a backend.</p></div>`;
 }
@@ -310,7 +312,7 @@ function fmSignOut(){setFm(null);renderFmLogin();}
 function fmMe(){const e=getFm();return foremenStore.get().find(f=>f.email===e)||{name:e,email:e};}
 function renderFmDashboard(){const me=fmMe();const mine=store.get().filter(j=>j.foreman&&j.foreman.email===me.email);
   const rows=mine.length?mine.map(j=>`<div class="jobrow" onclick="openFmJob('${j.id}')"><div><div class="id">${j.id} · ${esc(j.est?.customer)}</div>
-    <div class="meta">Pickup: ${esc(j.est?.oAddr)} ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} ${j.eta?'· '+esc(j.eta.whenLabel):''}</div></div>
+    <div class="meta">Pickup: ${esc(j.est?.oAddr)} · ${j.est?.volume||'?'} cf ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} ${j.eta?'· '+esc(j.eta.whenLabel):''}</div></div>
     <div class="right">${j.eta?'<span class="pill p-ok">window set</span>':'<span class="pill p-warn">needs ETA</span>'}</div></div>`).join('')
     :'<div class="empty">No jobs assigned to you yet.</div>';
   $('#app').innerHTML=`<div class="modebar">FOREMAN PORTAL</div>
@@ -324,6 +326,10 @@ function renderFmJob(id,fromLink){
    <div class="card fmwrap"><div style="display:flex;align-items:center;gap:8px"><span class="pill p-info">FOREMAN</span><h2 style="margin:0">Pickup — Job ${job.id}</h2>
      <button class="ghost sm right" onclick="openJobSheet('${job.id}','foreman')">📄 Job sheet</button><button class="ghost sm" onclick="goForeman()">My jobs</button></div>
     <p class="sub" style="margin-top:6px">Assigned to ${esc(job.foreman?job.foreman.name:'you')}. Review the job &amp; inventory, then confirm your 3-hour pickup window.</p>
+    <div class="volbar"><div class="vb"><span class="n">${e.volume} cf</span><span class="l">Volume</span></div>
+      <div class="vb"><span class="n">${e.inv?e.inv.totalPieces:'—'}</span><span class="l">Pieces</span></div>
+      <div class="vb"><span class="n">${e.miles||'—'}</span><span class="l">Miles</span></div>
+      <div class="vb"><span class="n">${esc(e.moveDay||'—')}</span><span class="l">Move day</span></div></div>
     <div class="grid"><div class="f"><label class="fl">Customer</label><span class="v">${esc(e.customer)}</span></div>
       <div class="f"><label class="fl">Phone</label><span class="v">${esc(e.phone)||''}</span></div>
       <div class="f"><label class="fl">Pickup${e.oType?' · '+esc(e.oType):''}</label><span class="v">${esc(e.oAddr)}</span></div>
@@ -348,7 +354,7 @@ function submitETA(id){const dt=$('#etaDate').value,win=$('#etaWin').value;
   if(!dt){alert('Pick a pickup date.');return;}if(!win){alert('Choose a 3-hour arrival window.');return;}
   const dl=new Date(dt+'T00:00').toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
   const eta={date:dt,window:win,whenLabel:dl+' · '+win,note:$('#etaNote').value.trim(),submittedAt:now()};
-  const job=getJob(id);if(!job)return;job.eta=eta;job.status='Awaiting pickup';saveJob(job);renderFmJob(id,false);window.scrollTo(0,0);}
+  const job=getJob(id);if(!job)return;job.eta=eta;job.status='Scheduled';saveJob(job);renderFmJob(id,false);window.scrollTo(0,0);}
 
 /* ===== JOB SHEET (contract + inventory + crew notes) ===== */
 function crewNotes(e){
