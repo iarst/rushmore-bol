@@ -68,7 +68,7 @@
   .rmh{font-weight:700;font-size:12.5px;color:var(--navy);text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--line);padding-bottom:5px;margin-bottom:6px}
   .it{font-size:13px;padding:2px 0;display:flex;gap:7px} .it .q{font-weight:700;color:var(--muted);min-width:26px}
   .it.sp{color:#7a5200;font-weight:600}
-  details.inv{margin-top:8px} details.inv summary{cursor:pointer;font-weight:700;color:var(--navy)}
+  details.inv{margin-top:8px} details.inv summary{cursor:pointer;font-weight:700;color:var(--navy);background:#eef2f7;border:1px solid var(--line);border-radius:8px;padding:9px 13px;list-style:none;display:inline-block} details.inv summary::-webkit-details-marker{display:none} details.inv summary:hover{background:#e3e9f1} details.inv[open] summary{margin-bottom:4px}
   /* job sheet */
   .sampleband{background:#fbeae7;color:#b3261e;font-weight:700;font-size:11px;text-align:center;border-radius:6px;padding:4px;margin:-2px 0 12px;letter-spacing:.3px}
   .sheethead{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid var(--navy);padding-bottom:8px}
@@ -413,7 +413,7 @@ function inventoryHTML(inv){
   const sp=s.special.length?`<div class="muted" style="margin:2px 0 10px;color:#7a5200">⚠ Crew heads-up: ${esc([...new Set(s.special)].join(' · '))}</div>`:'';
   const rooms=inv.rooms.map(r=>`<div class="rm"><div class="rmh">${esc(r.room)} <span class="muted" style="font-weight:600">· ${r.items.reduce((a,i)=>a+i.qty,0)} pcs</span></div>
     ${r.items.map(it=>`<div class="it ${SPECIAL.test(it.name.toUpperCase())?'sp':''}"><span class="q">${it.qty}×</span><span>${esc(it.name)}</span></div>`).join('')}</div>`).join('');
-  return chips+sp+`<div class="rooms">${rooms}</div>`;
+  return chips+sp+`<details class="inv"><summary>📋 Show / hide room-by-room inventory (${inv.rooms.length} rooms)</summary><div class="rooms" style="margin-top:8px">${rooms}</div></details>`;
 }
 
 /* ---------- extra services + customer notes (high-visibility) ---------- */
@@ -752,7 +752,7 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      ${chr('Redelivery','b_chRedelivery',s.chRedelivery)}
      ${chr('Binding estimate fee','b_chBinding',s.chBinding)}
      ${chr('Other','b_chOther',s.chOther)}
-     <div class="chrow tot"><span>TOTAL APPLICABLE CHARGES</span><input id="b_chTotal" class="mny big" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}"></div>
+     <div class="chrow tot"><span>TOTAL APPLICABLE CHARGES</span><input id="b_chTotal" class="mny big" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" oninput="recalcBalance()"></div>
      <div class="subh">Special delivery (AS-22)</div>
      <div class="twocol"><div class="f"><label class="fl">Dedicated truck — cu ft ordered</label><input id="b_dedicatedTruck" value="${esc(s.dedicatedTruck)}"></div>
        <div class="f"><label class="fl">Expedited — deliver on/before</label><input type="date" id="b_expeditedDate" value="${esc(s.expeditedDate)}"></div>
@@ -761,11 +761,12 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
    <div class="sigblock" id="sig_accessorial"></div>
 
    <div class="bolsec"><h4><span class="step">6</span> Payment schedule</h4>
-     <div class="ackbox">Total ${money(e.total)} − deposit ${money(e.deposit)} = <b>balance due ${money(p.bal)}</b>. Origin payment is collected before loading; the rest is due at delivery.</div>
+     <div class="ackbox">Total − deposit = balance. Enter the <b>origin payment collected at pickup</b>; the <b>balance due at delivery</b> is calculated automatically (balance − origin payment).</div>
      ${chr('Tariff discounts','b_payDiscount',s.payDiscount)}
-     ${chr('Prepaid deposit','b_payDeposit',s.payDeposit)}
-     ${chr('Origin payment collected','b_payOrigin',s.payOrigin)}
-     ${chr('Balance due at destination','b_payBalanceDest',s.payBalanceDest)}
+     <div class="chrow"><span>Total applicable charges</span><input id="b_payTotalRef" class="mny" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" readonly style="background:#f3f6fb"></div>
+     <div class="chrow"><span>Prepaid deposit (paid at booking)</span><input id="b_payDeposit" class="mny" value="${(s.payDeposit!==''&&s.payDeposit!=null)?esc(s.payDeposit):''}" oninput="recalcBalance()" placeholder="$"></div>
+     <div class="chrow"><span>💵 Origin payment collected (at pickup)</span><input id="b_payOrigin" class="mny" value="${(s.payOrigin!==''&&s.payOrigin!=null)?esc(s.payOrigin):''}" oninput="recalcBalance()" placeholder="$"></div>
+     <div class="chrow"><span><b>Balance due at delivery</b> <span class="muted">(auto)</span></span><input id="b_payBalanceDest" class="mny" value="${(s.payBalanceDest!==''&&s.payBalanceDest!=null)?esc(s.payBalanceDest):''}" readonly style="background:#e7f6ef;font-weight:800;color:#0f6e56"></div>
      ${chr('Price adjustments','b_payPriceAdj',s.payPriceAdj)}
      ${chr('Destination payment','b_payDestination',s.payDestination)}
      ${chr('Balance due to carrier within 30 days','b_payBalance30',s.payBalance30)}
@@ -800,9 +801,13 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      <p class="muted" id="sigCount2" style="margin:0 0 10px"></p>
      <div class="btnrow"><button onclick="generateBOL('${job.id}')">✅ Generate signed Bill of Lading</button><button class="ghost" onclick="openFmJob('${job.id}')">Cancel</button></div>
      <p class="muted" style="margin-top:8px">All section signatures, timestamps, device &amp; (if allowed) location are captured for the audit trail. Delivery acknowledgements are signed at delivery.</p></div>`;
-  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');window._sigState={ack:{}};fillSigBlocks();},30);
+  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');window._sigState={ack:{}};fillSigBlocks();recalcBalance();},30);
   window.scrollTo(0,0);
 }
+function recalcBalance(){const g=id=>{const el=document.getElementById(id);return el?(num(el.value)||0):0;};
+  const ct=document.getElementById('b_chTotal'),ref=document.getElementById('b_payTotalRef');if(ct&&ref)ref.value=ct.value;
+  const bal=g('b_chTotal')-g('b_payDeposit')-g('b_payOrigin');
+  const el=document.getElementById('b_payBalanceDest');if(el)el.value=(Math.round(bal*100)/100).toFixed(2);}
 const SIG_TEXT={
  valuation:'I have selected the valuation option above and received the "Your Rights and Responsibilities When You Move" booklet.',
  documents:'I have received the publications: Ready to Move; Claim Filing & Arbitration Program; tariff availability, method of conversion and removed weighing of the truck.',
