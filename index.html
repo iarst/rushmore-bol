@@ -6,12 +6,11 @@
 <title>Rushmore Dispatch — MVP</title>
 <style>
   :root{--navy:#1F3A5F;--blue:#2E75B6;--ink:#23282d;--muted:#6b7280;--line:#e3e8ef;--bg:#eef1f5;--card:#fff;
-    --ok:#1D9E75;--okbg:#e7f6ef;--warn:#b9770e;--warnbg:#fdf4e3;--bad:#c0392b;--badbg:#fbeae7;--info:#2563eb;--infobg:#e8f0fe;--teal:#0e7490;--tealbg:#e0f2fe;}
+    --ok:#1D9E75;--okbg:#e7f6ef;--warn:#b9770e;--warnbg:#fdf4e3;--bad:#c0392b;--badbg:#fbeae7;--info:#2563eb;--infobg:#e8f0fe;--teal:#0e7490;}
   *{box-sizing:border-box}
   body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.5}
   header.app{background:var(--navy);color:#fff;padding:12px 22px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20;gap:10px;flex-wrap:wrap}
-  header.app h1{margin:0;font-size:16px;font-weight:700;cursor:pointer}
-  header.app .tag{font-size:10px;background:#3a557a;border-radius:5px;padding:2px 7px;margin-left:6px}
+  header.app h1{margin:0;font-size:16px;font-weight:700;cursor:pointer} header.app .tag{font-size:10px;background:#3a557a;border-radius:5px;padding:2px 7px;margin-left:6px}
   header.app nav{display:flex;gap:4px;align-items:center}
   header.app nav button{background:transparent;color:#cdd8e6;border:0;font:inherit;font-weight:600;cursor:pointer;padding:6px 10px;border-radius:7px}
   header.app nav button:hover{background:#2c456b} header.app nav button.act{background:#2E75B6;color:#fff}
@@ -19,53 +18,52 @@
   .modebar{font-size:12px;color:var(--muted);margin:-8px 0 14px;font-weight:600}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(20,40,70,.04)}
   .card.sub2{background:#fafbfd}
-  h2{font-size:18px;margin:0 0 4px}
-  h3.sg{font-size:14px;margin:0 0 10px;color:var(--navy)}
+  h2{font-size:18px;margin:0 0 4px} h3.sg{font-size:14px;margin:0 0 10px;color:var(--navy)}
   .sub{color:var(--muted);font-size:13px;margin:0 0 16px}
   button{font:inherit;font-weight:600;border:0;border-radius:9px;padding:10px 16px;cursor:pointer;background:var(--blue);color:#fff;transition:filter .15s}
-  button:hover{filter:brightness(1.07)}
-  button.ghost{background:#eef2f7;color:var(--navy)} button.alt{background:var(--navy)} button.sm{padding:7px 12px;font-size:13px}
+  button:hover{filter:brightness(1.07)} button.ghost{background:#eef2f7;color:var(--navy)} button.alt{background:var(--navy)} button.sm{padding:7px 12px;font-size:13px}
   button:disabled{opacity:.45;cursor:not-allowed;filter:none}
-  .btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center}
-  .right{margin-left:auto}
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center} .right{margin-left:auto}
   textarea,input,select{font:inherit;width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:#fbfcfe}
   textarea:focus,input:focus,select:focus{outline:2px solid var(--blue);outline-offset:-1px}
   label.fl{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
-  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px 18px}
-  .f{display:flex;flex-direction:column;margin-bottom:4px} .f .v{font-weight:600}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px 18px} .f{display:flex;flex-direction:column;margin-bottom:4px} .f .v{font-weight:600}
   .pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap}
   .p-ok{background:var(--okbg);color:var(--ok)} .p-warn{background:var(--warnbg);color:var(--warn)} .p-info{background:var(--infobg);color:var(--info)} .p-grey{background:#eef0f3;color:#667}
   .banner{border-radius:10px;padding:14px 16px;font-weight:600;margin-top:6px}
-  .banner.ok{background:var(--okbg);border:1px solid #bfe6d4;color:#0f6e56}
-  .banner.info{background:var(--infobg);border:1px solid #bcd4f5;color:#1b4f8a}
+  .banner.ok{background:var(--okbg);border:1px solid #bfe6d4;color:#0f6e56} .banner.info{background:var(--infobg);border:1px solid #bcd4f5;color:#1b4f8a}
   .banner small{display:block;font-weight:500;margin-top:5px;opacity:.85}
   .steps{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
   .steps .s{font-size:11.5px;font-weight:700;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:20px;padding:4px 11px}
   .steps .s.on{background:var(--navy);color:#fff;border-color:var(--navy)} .steps .s.done{background:var(--okbg);color:var(--ok);border-color:#bfe6d4}
   .joblist{display:flex;flex-direction:column;gap:10px}
   .jobrow{display:flex;align-items:center;gap:14px;padding:13px 16px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer}
-  .jobrow:hover{border-color:var(--blue);background:#f7fafd}
-  .jobrow .id{font-weight:700} .jobrow .meta{color:var(--muted);font-size:12.5px}
-  .muted{color:var(--muted);font-size:12px}
-  .empty{text-align:center;color:var(--muted);padding:30px}
+  .jobrow:hover{border-color:var(--blue);background:#f7fafd} .jobrow .id{font-weight:700} .jobrow .meta{color:var(--muted);font-size:12.5px}
+  .muted{color:var(--muted);font-size:12px} .empty{text-align:center;color:var(--muted);padding:30px}
   .linkbox{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#f3f6fb;border:1px solid var(--line);border-radius:8px;padding:10px 12px;word-break:break-all;color:#345}
   .eta{font-size:19px;font-weight:800;color:var(--navy)}
   .kv{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:14px} .kv:last-child{border:0} .kv .k{color:var(--muted)}
   .fmcard{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fbfcfe}
   .av{width:38px;height:38px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
   .fmwrap{border-top:4px solid var(--teal)}
-  @media(max-width:640px){.grid{grid-template-columns:1fr}}
+  /* inventory */
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 8px}
+  .chip{background:#eef2f7;color:var(--navy);border-radius:20px;padding:4px 11px;font-size:12px;font-weight:700}
+  .chip.warn{background:var(--warnbg);color:var(--warn)} .chip.box{background:#e8f0fe;color:#1b4f8a}
+  .rooms{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .rm{border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fbfcfe}
+  .rmh{font-weight:700;font-size:12.5px;color:var(--navy);text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--line);padding-bottom:5px;margin-bottom:6px}
+  .it{font-size:13px;padding:2px 0;display:flex;gap:7px} .it .q{font-weight:700;color:var(--muted);min-width:26px}
+  .it.sp{color:#7a5200;font-weight:600}
+  details.inv{margin-top:8px} details.inv summary{cursor:pointer;font-weight:700;color:var(--navy)}
+  @media(max-width:640px){.grid,.rooms{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<header class="app">
-  <h1 onclick="goOffice()">Rushmore Van Lines <span class="tag">MVP · STEPS 1–3</span></h1>
-  <nav id="nav"></nav>
-</header>
+<header class="app"><h1 onclick="goOffice()">Rushmore Van Lines <span class="tag">MVP · STEPS 1–3</span></h1><nav id="nav"></nav></header>
 <div class="wrap" id="app"></div>
 
 <script>
-/* ---------- storage ---------- */
 const SEED_FM=[{name:'You (test foreman)',email:'foreman@example.com'},{name:'Mike Torres',email:'mike.torres@example.com'},{name:'Andre Cole',email:'andre.cole@example.com'}];
 const store={get(){try{return JSON.parse(localStorage.getItem('rvl_jobs')||'null')||window._j||[]}catch(e){return window._j||[]}},set(j){window._j=j;try{localStorage.setItem('rvl_jobs',JSON.stringify(j))}catch(e){}}};
 const foremenStore={get(){try{return JSON.parse(localStorage.getItem('rvl_foremen')||'null')||SEED_FM}catch(e){return SEED_FM}},set(f){try{localStorage.setItem('rvl_foremen',JSON.stringify(f))}catch(e){}}};
@@ -78,74 +76,162 @@ const now=()=>new Date().toLocaleString();
 const enc=o=>btoa(unescape(encodeURIComponent(JSON.stringify(o))));
 const dec=s=>JSON.parse(decodeURIComponent(escape(atob(s))));
 const initials=n=>(n||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 let cur=null;
 
 const SAMPLE_EMAIL=`From: Demo Broker <broker@example.com>
 Subject: Moving Estimate - Job 90000001
+Customer Rep: Demo Rep  (555) 700-0000
 
 Customer: Jordan Demo   (555) 010-2026   demo@example.com
-Moving From: 100 Test Street, Demo City, WA 98000
-Moving To: 200 Sample Ave, Trial Town, WA 98100
+Moving From: 100 Test Street, Demo City, WA 98000  (House)
+Moving To: 200 Sample Ave, Trial Town, WA 98100  (House)
+Move Type: Long Distance, 151 miles
+Move Day: Thursday/Friday
 Estimated Volume: 1650 cf    Rate: $2.00 per cf
 Basic Estimate Price: $3,300.00
 Total Moving Estimate: $9,010.05
 Customer Payment (deposit): $3,834.40
 Valuation: 60c/lb waiver
-Articles: 68 items / 172 pieces
-Requested pickup: 06/11–06/12/2026   Delivery: 06/12/2026`;
+Requested pickup: 06/11–06/12/2026   Delivery: 06/12/2026
+1st Available Delivery: 06/12/2026
 
+Articles List 68 Items 172 Pieces
+BEDROOM 2
+1 FOLDING BED
+1 BED, MATTRESS ONLY QUEEN (PKG $100.00)
+1 BED, HEADBOARD QUEEN
+1 BED, FRAME ONLY QUEEN
+1 LAMP, TABLE (PBO)
+1 NIGHT STAND
+BEDROOM 3
+1 King Bed Frame
+1 King Mattress
+1 BED, HEADBOARD KING
+1 DRESSER, DOUBLE
+2 NIGHT STAND
+BEDROOM 4
+1 DESK, RETURN (L-SHAPE)
+1 COMPUTER CHAIR
+DINING ROOM
+1 DINING TABLE
+6 Dining Chair
+1 TABLE, DINING LEAF
+1 AREA RUG, 5X7
+GARAGE
+1 LAWNMOWER, PUSH
+1 LAWNMOWER, RIDE (150 BULK FEE)
+1 TOOL BOX BOTTOM W/ WHEELS (100 BULK FEE)
+1 MITER SAW
+2 KAYAK (UP TO 12 FOOT) (125 BULK FEE)
+GENERAL
+1 BARBECUE GRILL, SMALL (PKG $29.99)
+1 SNOWBLOWER
+1 GENERATOR, SMALL
+1 WHEELBARROW
+1 PRESSURE WASHER
+2 SUITCASE SM. (CARRY ON)
+1 LADDER, STEP
+1 Microwave
+1 VACUUM CLEANER
+2 PAINTING, MD (PBO) (PKG $34.99)
+2 DOG CAGE
+75 BOX, LINEN/MEDIUM
+1 WASHING MACHINE
+1 DRYER
+KITCHEN
+4 BAR, STOOL
+LIVING ROOM
+3 AREA RUG, 5X7
+2 SOFA, 2 LOVESEAT
+2 TABLE, END
+1 Three-Seat Sofa
+1 OTTOMAN W/STORAGE
+1 TV FLAT SCREEN- 33-60 (PKG $110.00)
+4 PICTURES, MEDIUM (PKG $34.99)
+MASTER BEDROOM
+1 SOFA, SECTIONAL-2 PIECE
+1 ENTERTAINMENT CENTER, REG
+1 TV FLAT SCREEN- 60+ (PKG $125.00)
+3 BOX, WARDROBE
+OUT DOOR FURNITURE
+1 PATIO COFFEE TABLE
+6 PATIO CHAIR`;
+
+/* ---------- extraction ---------- */
 function extract(text){
   const g=(re,d='')=>{const m=text.match(re);return m?m[1].trim():d;};const n=re=>num(g(re));
-  return{job:g(/Job\s*#?\s*(\d{6,})/i)||g(/(\d{8})/),customer:g(/Customer:\s*([A-Za-z .'-]+?)(?:\s{2,}|\()/i),
-    phone:g(/(\(\d{3}\)\s?\d{3}-\d{4})/),email:g(/([\w.+-]+@(?!safeship)[\w.-]+\.\w+)/i),
-    oAddr:g(/Moving From:\s*(.+)/i),dAddr:g(/Moving To:\s*(.+)/i),volume:n(/Volume:\s*([\d,]+)/i),rate:n(/Rate:\s*\$?([\d.]+)/i),
-    basic:n(/Basic[^$]*\$([\d,]+\.?\d*)/i),total:n(/Total[^$]*\$([\d,]+\.?\d*)/i),deposit:n(/(?:deposit|Customer Payment)[^$]*\$([\d,]+\.?\d*)/i),
-    items:g(/Articles:\s*(.+)/i),valuation:/60c|60¢|0\.60|waiver/i.test(text)?'60¢/lb waiver':'See estimate',
-    pickup:g(/pickup:\s*([\d/–-]+)/i)||'06/12/2026',delivery:g(/Delivery:\s*([\d/]+)/i)||'06/12/2026'};
+  return{job:g(/Job\s*#?\s*(\d{6,})/i)||g(/(\d{8})/),
+    rep:g(/Customer Rep:\s*([A-Za-z .']+?)(?:\s{2,}|\(|\n)/i),repPhone:g(/Customer Rep:[^\n(]*(\(\d{3}\)\s?\d{3}-\d{4})/i),
+    customer:g(/Customer:\s*([A-Za-z .'-]+?)(?:\s{2,}|\()/i),phone:g(/(\(\d{3}\)\s?\d{3}-\d{4})/),email:g(/([\w.+-]+@(?!safeship)[\w.-]+\.\w+)/i),
+    oAddr:g(/Moving From:\s*(.+?)(?:\s*\(|$)/im),dAddr:g(/Moving To:\s*(.+?)(?:\s*\(|$)/im),
+    oType:g(/Moving From:.*\(([^)]+)\)/i),dType:g(/Moving To:.*\(([^)]+)\)/i),
+    miles:g(/Long Distance,\s*([\d,]+)\s*miles/i),moveDay:g(/Move Day:\s*([A-Za-z\/]+)/i),
+    volume:n(/Volume:\s*([\d,]+)/i),rate:n(/Rate:\s*\$?([\d.]+)/i),basic:n(/Basic[^$]*\$([\d,]+\.?\d*)/i),
+    total:n(/Total[^$]*\$([\d,]+\.?\d*)/i),deposit:n(/(?:deposit|Customer Payment)[^$]*\$([\d,]+\.?\d*)/i),
+    valuation:/60c|60¢|0\.60|waiver/i.test(text)?'60¢/lb waiver':'See estimate',
+    pickup:g(/(?:Requested )?pickup:?\s*([\d/–-]+)/i)||'06/12/2026',delivery:g(/Delivery:\s*([\d/]+)/i)||'06/12/2026',
+    firstDelivery:g(/1st Available Delivery:\s*([\d/]+)/i),
+    inv:parseInventory(text)};
+}
+function parseInventory(text){
+  const m=text.match(/Articles List\s+(\d+)\s+Items?\s+(\d+)\s+Pieces?/i); if(!m)return null;
+  let start=text.indexOf(m[0])+m[0].length, end=text.length;
+  [/Packing Material/i,/Understanding Your Estimate/i].forEach(re=>{const mm=text.slice(start).match(re);if(mm)end=Math.min(end,start+mm.index);});
+  const lines=text.slice(start,end).split('\n').map(l=>l.trim()).filter(Boolean);
+  const rooms=[];let curR=null;
+  for(const l of lines){
+    if(/^qty\b/i.test(l)&&/item/i.test(l))continue;
+    const im=l.match(/^(\d+)\s+(.+)$/);
+    if(im){if(!curR){curR={room:'GENERAL',items:[]};rooms.push(curR);}curR.items.push({qty:+im[1],name:im[2]});}
+    else{curR={room:l,items:[]};rooms.push(curR);}
+  }
+  return{totalItems:+m[1],totalPieces:+m[2],rooms:rooms.filter(r=>r.items.length)};
+}
+const SPECIAL=/PIANO|SAFE|REFRIGERAT|FREEZER|WASH|DRYER|TREADMILL|POOL TABLE|RIDE|RIDING|MOWER|KAYAK|CANOE|GENERATOR|SNOWBLOWER|MOTORCYCLE|JACUZZI|ATV|GOLF CART|VENDING|BULK FEE|GUN/i;
+function invSummary(inv){let boxes=0;const special=[];
+  inv.rooms.forEach(r=>r.items.forEach(it=>{const n=it.name.toUpperCase();
+    if(/BOX|PLASTIC BIN|WARDROBE/.test(n))boxes+=it.qty;
+    if(SPECIAL.test(n))special.push((it.qty>1?it.qty+'× ':'')+it.name.replace(/\s*\([^)]*\)/g,'').trim());}));
+  return{boxes,special};}
+function inventoryHTML(inv){
+  if(!inv)return '<p class="muted">No itemized inventory on this estimate.</p>';
+  const s=invSummary(inv);
+  const chips=`<div class="chips"><span class="chip">${inv.totalPieces} pieces</span><span class="chip">${inv.totalItems} line items</span>
+    <span class="chip box">${s.boxes} boxes</span><span class="chip">${inv.rooms.length} rooms</span>
+    ${s.special.length?`<span class="chip warn">${s.special.length} bulky / special</span>`:''}</div>`;
+  const sp=s.special.length?`<div class="muted" style="margin:2px 0 10px;color:#7a5200">⚠ Crew heads-up: ${esc([...new Set(s.special)].join(' · '))}</div>`:'';
+  const rooms=inv.rooms.map(r=>`<div class="rm"><div class="rmh">${esc(r.room)} <span class="muted" style="font-weight:600">· ${r.items.reduce((a,i)=>a+i.qty,0)} pcs</span></div>
+    ${r.items.map(it=>`<div class="it ${SPECIAL.test(it.name.toUpperCase())?'sp':''}"><span class="q">${it.qty}×</span><span>${esc(it.name)}</span></div>`).join('')}</div>`).join('');
+  return chips+sp+`<div class="rooms">${rooms}</div>`;
 }
 
-/* ---------- shared job helpers ---------- */
+/* ---------- helpers ---------- */
 function saveJob(job){const jobs=store.get();const i=jobs.findIndex(j=>j.id===job.id);const c=JSON.parse(JSON.stringify(job));if(i>=0)jobs[i]=c;else jobs.unshift(c);store.set(jobs);}
 function getJob(id){return store.get().find(j=>j.id===id);}
 function statusPill(s){const m={New:'p-grey',Assigned:'p-info','Awaiting pickup':'p-warn'};return '<span class="pill '+(m[s]||'p-grey')+'">'+s+'</span>';}
 function foremanLink(j){return location.origin+location.pathname+'#fm='+enc(j);}
 
 /* ---------- router & nav ---------- */
-function navHTML(mode){
-  return `<button class="${mode==='office'?'act':''}" onclick="goOffice()">Dispatch (office)</button>
-    <button class="${mode==='foreman'?'act':''}" onclick="goForeman()">Foreman portal</button>`;
-}
+function navHTML(mode){return `<button class="${mode==='office'?'act':''}" onclick="goOffice()">Dispatch (office)</button><button class="${mode==='foreman'?'act':''}" onclick="goForeman()">Foreman portal</button>`;}
 function router(){
   const h=location.hash||'';
-  if(h.indexOf('#fm=')===0){ // email link: upsert job, sign in as that foreman, open it
-    try{const job=dec(h.slice(4)); if(!getJob(job.id))saveJob(job); if(job.foreman&&job.foreman.email)setFm(job.foreman.email);
-      $('#nav').innerHTML=navHTML('foreman'); renderFmJob(job.id,true);
-    }catch(e){$('#app').innerHTML='<div class="card">Invalid link.</div>';}
-    return;
-  }
-  if(h.indexOf('#foreman')===0){ $('#nav').innerHTML=navHTML('foreman'); renderForemanPortal(); return; }
-  $('#nav').innerHTML=navHTML('office')+' <button onclick="newJob()">+ New job</button>';
-  render('dashboard');
+  if(h.indexOf('#fm=')===0){try{const job=dec(h.slice(4));if(!getJob(job.id))saveJob(job);if(job.foreman&&job.foreman.email)setFm(job.foreman.email);$('#nav').innerHTML=navHTML('foreman');renderFmJob(job.id,true);}catch(e){$('#app').innerHTML='<div class="card">Invalid link.</div>';}return;}
+  if(h.indexOf('#foreman')===0){$('#nav').innerHTML=navHTML('foreman');renderForemanPortal();return;}
+  $('#nav').innerHTML=navHTML('office')+' <button onclick="newJob()">+ New job</button>';render('dashboard');
 }
 window.addEventListener('hashchange',router);
-function goOffice(){ if(location.hash)location.hash=''; else router(); }
-function goForeman(){ if(location.hash==='#foreman')router(); else location.hash='#foreman'; }
+function goOffice(){if(location.hash)location.hash='';else router();}
+function goForeman(){if(location.hash==='#foreman')router();else location.hash='#foreman';}
 
-/* =========================================================
-   OFFICE SIDE
-========================================================= */
-function render(v){const a=$('#app');
-  if(v==='dashboard')return a.innerHTML=vDashboard();
-  if(v==='intake')return a.innerHTML=vIntake();
-  if(v==='job')return a.innerHTML=vJob();
-}
+/* ===== OFFICE ===== */
+function render(v){const a=$('#app');if(v==='dashboard')return a.innerHTML=vDashboard();if(v==='intake')return a.innerHTML=vIntake();if(v==='job')return a.innerHTML=vJob();}
 function newJob(){cur={id:'tmp'+Date.now(),est:null,foreman:null,eta:null,status:'New',created:now()};if(location.hash)location.hash='';render('intake');}
 function vDashboard(){
   const jobs=store.get();
-  const rows=jobs.length?jobs.map(j=>`<div class="jobrow" onclick="openJob('${j.id}')">
-    <div><div class="id">${j.id} · ${j.est?.customer||'—'}</div>
-      <div class="meta">${(j.est?.oAddr||'').split(',')[1]||''} → ${(j.est?.dAddr||'').split(',')[1]||''} ${j.foreman?'· '+j.foreman.name:''} ${j.eta?'· '+j.eta.whenLabel:''}</div></div>
-    <div class="right">${statusPill(j.status)}</div></div>`).join('')
+  const rows=jobs.length?jobs.map(j=>`<div class="jobrow" onclick="openJob('${j.id}')"><div><div class="id">${j.id} · ${esc(j.est?.customer)||'—'}</div>
+      <div class="meta">${esc((j.est?.oAddr||'').split(',')[1]||'')} → ${esc((j.est?.dAddr||'').split(',')[1]||'')} ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} ${j.foreman?'· '+esc(j.foreman.name):''} ${j.eta?'· '+esc(j.eta.whenLabel):''}</div></div>
+      <div class="right">${statusPill(j.status)}</div></div>`).join('')
     :'<div class="empty">No jobs yet. Click <b>+ New job</b> to bring one in from a broker estimate.</div>';
   const c={New:0,Assigned:0,'Awaiting pickup':0};jobs.forEach(j=>c[j.status]=(c[j.status]||0)+1);
   return `<div class="modebar">OFFICE · DISPATCH BOARD</div>
@@ -153,21 +239,17 @@ function vDashboard(){
     <div class="btnrow" style="margin:0 0 14px"><button onclick="newJob()">+ New job from estimate</button>
     <span class="right" style="align-self:center"><span class="pill p-grey">${c.New||0} new</span> <span class="pill p-info">${c.Assigned||0} assigned</span> <span class="pill p-warn">${c['Awaiting pickup']||0} confirmed</span></span></div>
     <div class="joblist">${rows}</div></div>
-    <div class="card"><p class="muted" style="margin:0">Prototype · steps 1–3 · runs in your browser, all data saved locally on this device. Foreman accounts &amp; cross-device sync are simulated here; the real version needs a backend.</p></div>`;
+    <div class="card"><p class="muted" style="margin:0">Prototype · steps 1–3 · runs in your browser, data saved locally on this device. Foreman accounts &amp; cross-device sync are simulated; the real version needs a backend.</p></div>`;
 }
-function vIntake(){
-  return `<div class="modebar">OFFICE</div><div class="steps"><span class="s on">1. Intake (AI)</span><span class="s">2. Assign foreman</span><span class="s">3. Pickup window</span></div>
-    <div class="card"><h2>1 · Estimate intake</h2>
-    <p class="sub">The broker estimate is forwarded to the AI inbox. The agent reads it and fills the job — no manual keying.</p>
-    <label class="fl">Forwarded estimate</label><textarea id="estText" rows="11">${SAMPLE_EMAIL}</textarea>
+function vIntake(){return `<div class="modebar">OFFICE</div><div class="steps"><span class="s on">1. Intake (AI)</span><span class="s">2. Assign foreman</span><span class="s">3. Pickup window</span></div>
+    <div class="card"><h2>1 · Estimate intake</h2><p class="sub">The broker estimate is forwarded to the AI inbox. The agent reads it — including the full itemized inventory — and fills the job.</p>
+    <label class="fl">Forwarded estimate</label><textarea id="estText" rows="12">${SAMPLE_EMAIL}</textarea>
     <div class="btnrow"><button class="ghost" onclick="document.getElementById('estText').value=\`${SAMPLE_EMAIL.replace(/`/g,'\\`')}\`">Reload sample</button>
-    <button onclick="doExtract()">🤖 Run AI extraction →</button></div></div>`;
-}
+    <button onclick="doExtract()">🤖 Run AI extraction →</button></div></div>`;}
 function doExtract(){const e=extract($('#estText').value);if(!e.job){alert('No job number found — paste a fuller estimate or use the sample.');return;}cur.est=e;cur.id=e.job;cur.status='New';saveJob(cur);render('job');}
 function vJob(){
   const j=cur,e=j.est,fm=foremenStore.get();
-  const opts=fm.map((f,i)=>`<option value="${i}">${f.name} — ${f.email}</option>`).join('');
-  const charge=[['Volume',e.volume+' cf @ $'+e.rate],['Total',money(e.total)],['Deposit',money(e.deposit)],['Valuation',e.valuation],['Items',e.items||'—']];
+  const opts=fm.map((f,i)=>`<option value="${i}">${esc(f.name)} — ${esc(f.email)}</option>`).join('');
   let assignBlock;
   if(!j.foreman){
     assignBlock=`<div class="card sub2"><h3 class="sg">Assign a foreman</h3>
@@ -177,100 +259,89 @@ function vJob(){
         <div class="grid" style="margin-top:8px"><div class="f"><label class="fl">Name</label><input id="nfn" placeholder="Full name"></div>
           <div class="f"><label class="fl">Email</label><input id="nfe" placeholder="name@email.com"></div></div>
         <button class="ghost sm" onclick="addForeman()">Save foreman</button></details></div>`;
-  } else {
+  }else{
     const link=foremanLink(j);
     const mailto='mailto:'+encodeURIComponent(j.foreman.email)+'?subject='+encodeURIComponent('Pickup assigned — Job '+j.id)+'&body='+encodeURIComponent('You have been assigned a pickup. Open your job and confirm a pickup window:\n\n'+link);
     assignBlock=`<div class="card sub2"><h3 class="sg">Assigned foreman</h3>
-      <div class="fmcard"><div class="av">${initials(j.foreman.name)}</div>
-        <div><div style="font-weight:700">${j.foreman.name}</div><div class="muted">${j.foreman.email} · assigned ${j.assignedAt||''}</div></div>
+      <div class="fmcard"><div class="av">${initials(j.foreman.name)}</div><div><div style="font-weight:700">${esc(j.foreman.name)}</div><div class="muted">${esc(j.foreman.email)} · assigned ${j.assignedAt||''}</div></div>
         <div class="right"><button class="ghost sm" onclick="cur.foreman=null;cur.status='New';saveJob(cur);render('job')">Reassign</button></div></div>
-      <h3 class="sg" style="margin-top:16px">Foreman link <span class="muted">(email it to ${j.foreman.name.split(' ')[0]})</span></h3>
-      <div class="linkbox">${link}</div>
-      <div class="btnrow"><button class="sm" onclick="copyLink()">📋 Copy link</button>
-        <a href="${mailto}"><button class="sm ghost" type="button">✉️ Email link</button></a>
+      <h3 class="sg" style="margin-top:16px">Foreman link <span class="muted">(email it to ${esc(j.foreman.name.split(' ')[0])})</span></h3><div class="linkbox">${link}</div>
+      <div class="btnrow"><button class="sm" onclick="copyLink()">📋 Copy link</button><a href="${mailto}"><button class="sm ghost" type="button">✉️ Email link</button></a>
         <button class="ghost sm" onclick="location.hash='fm='+enc(cur)">Open as foreman →</button></div>
-      ${j.eta?`<div class="banner ok" style="margin-top:14px">✓ Pickup window confirmed: <span class="eta">${j.eta.whenLabel}</span>${j.eta.note?' — '+j.eta.note:''}<small>confirmed ${j.eta.submittedAt} by ${j.foreman.name}</small></div>`
-        :`<div class="banner info" style="margin-top:14px">Waiting for ${j.foreman.name.split(' ')[0]} to sign in and confirm a 3-hour pickup window…</div>`}</div>`;
+      ${j.eta?`<div class="banner ok" style="margin-top:14px">✓ Pickup window confirmed: <span class="eta">${esc(j.eta.whenLabel)}</span>${j.eta.note?' — '+esc(j.eta.note):''}<small>confirmed ${j.eta.submittedAt} by ${esc(j.foreman.name)}</small></div>`
+        :`<div class="banner info" style="margin-top:14px">Waiting for ${esc(j.foreman.name.split(' ')[0])} to sign in and confirm a 3-hour pickup window…</div>`}</div>`;
   }
   return `<div class="modebar">OFFICE</div><div class="steps"><span class="s done">1. Intake</span><span class="s ${j.foreman?'done':'on'}">2. Assign foreman</span><span class="s ${j.eta?'done':(j.foreman?'on':'')}">3. Pickup window</span></div>
     <div class="card"><div style="display:flex;align-items:center;gap:10px"><h2 style="margin:0">Job ${j.id}</h2>${statusPill(j.status)}<button class="ghost sm right" onclick="goOffice()">← Dispatch board</button></div>
-    <p class="sub" style="margin-top:6px">Read by the AI from the broker estimate.</p>
-    <div class="grid"><div class="f"><label class="fl">Customer</label><span class="v">${e.customer}</span></div>
-      <div class="f"><label class="fl">Contact</label><span class="v">${e.phone||''} · ${e.email||''}</span></div>
-      <div class="f"><label class="fl">Origin</label><span class="v">${e.oAddr}</span></div>
-      <div class="f"><label class="fl">Destination</label><span class="v">${e.dAddr}</span></div>
-      <div class="f"><label class="fl">Requested pickup</label><span class="v">${e.pickup}</span></div>
-      <div class="f"><label class="fl">Delivery</label><span class="v">${e.delivery}</span></div></div>
+    <p class="sub" style="margin-top:6px">Read by the AI from the broker estimate${e.rep?' · broker rep '+esc(e.rep):''}.</p>
+    <div class="grid"><div class="f"><label class="fl">Customer</label><span class="v">${esc(e.customer)}</span></div>
+      <div class="f"><label class="fl">Contact</label><span class="v">${esc(e.phone)||''} · ${esc(e.email)||''}</span></div>
+      <div class="f"><label class="fl">Origin${e.oType?' · '+esc(e.oType):''}</label><span class="v">${esc(e.oAddr)}</span></div>
+      <div class="f"><label class="fl">Destination${e.dType?' · '+esc(e.dType):''}</label><span class="v">${esc(e.dAddr)}</span></div>
+      <div class="f"><label class="fl">Move type</label><span class="v">${e.miles?'Long distance · '+esc(e.miles)+' mi':'—'} ${e.moveDay?'· '+esc(e.moveDay):''}</span></div>
+      <div class="f"><label class="fl">Requested pickup · delivery</label><span class="v">${esc(e.pickup)} · ${esc(e.delivery)}${e.firstDelivery?' (1st avail '+esc(e.firstDelivery)+')':''}</span></div></div>
     <h3 class="sg" style="margin-top:14px">Estimate summary</h3>
-    ${charge.map(c=>`<div class="kv"><span class="k">${c[0]}</span><span>${c[1]}</span></div>`).join('')}</div>${assignBlock}`;
+    <div class="kv"><span class="k">Volume · rate</span><span>${e.volume} cf @ $${e.rate}</span></div>
+    <div class="kv"><span class="k">Total · deposit</span><span>${money(e.total)} · ${money(e.deposit)}</span></div>
+    <div class="kv"><span class="k">Valuation</span><span>${esc(e.valuation)}</span></div>
+    <h3 class="sg" style="margin-top:16px">📦 Inventory ${e.inv?`<span class="muted" style="font-weight:600">· ${e.inv.totalPieces} pieces</span>`:''}</h3>
+    ${inventoryHTML(e.inv)}</div>${assignBlock}`;
 }
 function assignForeman(){const fm=foremenStore.get();const i=+$('#fmSel').value;cur.foreman=fm[i];cur.assignedAt=now();cur.status='Assigned';saveJob(cur);render('job');}
 function addForeman(){const n=$('#nfn').value.trim(),em=$('#nfe').value.trim();if(!n){alert('Enter a name.');return;}const fm=foremenStore.get();fm.push({name:n,email:em});foremenStore.set(fm);render('job');}
 function copyLink(){const t=foremanLink(cur);(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{const b=event.target;b.textContent='✓ Copied';setTimeout(()=>b.textContent='📋 Copy link',1500);}).catch(()=>prompt('Copy this link:',t));}
 function openJob(id){cur=getJob(id);if(cur)render('job');}
 
-/* =========================================================
-   FOREMAN PORTAL  (simulated accounts, same-device)
-========================================================= */
-function renderForemanPortal(){ getFm()?renderFmDashboard():renderFmLogin(); }
-function renderFmLogin(){
-  const fm=foremenStore.get();
-  $('#app').innerHTML=`<div class="modebar">FOREMAN PORTAL</div>
+/* ===== FOREMAN PORTAL ===== */
+function renderForemanPortal(){getFm()?renderFmDashboard():renderFmLogin();}
+function renderFmLogin(){const fm=foremenStore.get();$('#app').innerHTML=`<div class="modebar">FOREMAN PORTAL</div>
     <div class="card fmwrap"><h2>Foreman sign in</h2><p class="sub">Sign in to see the jobs assigned to you. (Demo — pick your name; no password in the prototype.)</p>
-    <div class="grid"><div class="f"><label class="fl">Your account</label><select id="fmLogin">${fm.map(f=>`<option value="${f.email}">${f.name} — ${f.email}</option>`).join('')}</select></div>
-      <div class="f" style="justify-content:flex-end"><button onclick="fmSignIn()">Sign in →</button></div></div></div>`;
-}
+    <div class="grid"><div class="f"><label class="fl">Your account</label><select id="fmLogin">${fm.map(f=>`<option value="${esc(f.email)}">${esc(f.name)} — ${esc(f.email)}</option>`).join('')}</select></div>
+      <div class="f" style="justify-content:flex-end"><button onclick="fmSignIn()">Sign in →</button></div></div></div>`;}
 function fmSignIn(){setFm($('#fmLogin').value);renderFmDashboard();}
 function fmSignOut(){setFm(null);renderFmLogin();}
 function fmMe(){const e=getFm();return foremenStore.get().find(f=>f.email===e)||{name:e,email:e};}
-function renderFmDashboard(){
-  const me=fmMe(); const mine=store.get().filter(j=>j.foreman&&j.foreman.email===me.email);
-  const rows=mine.length?mine.map(j=>`<div class="jobrow" onclick="openFmJob('${j.id}')">
-    <div><div class="id">${j.id} · ${j.est?.customer||''}</div><div class="meta">Pickup: ${(j.est?.oAddr||'')} ${j.eta?'· '+j.eta.whenLabel:''}</div></div>
+function renderFmDashboard(){const me=fmMe();const mine=store.get().filter(j=>j.foreman&&j.foreman.email===me.email);
+  const rows=mine.length?mine.map(j=>`<div class="jobrow" onclick="openFmJob('${j.id}')"><div><div class="id">${j.id} · ${esc(j.est?.customer)}</div>
+    <div class="meta">Pickup: ${esc(j.est?.oAddr)} ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} ${j.eta?'· '+esc(j.eta.whenLabel):''}</div></div>
     <div class="right">${j.eta?'<span class="pill p-ok">window set</span>':'<span class="pill p-warn">needs ETA</span>'}</div></div>`).join('')
     :'<div class="empty">No jobs assigned to you yet.</div>';
   $('#app').innerHTML=`<div class="modebar">FOREMAN PORTAL</div>
-    <div class="card fmwrap"><div style="display:flex;align-items:center;gap:12px">
-      <div class="av">${initials(me.name)}</div><div><h2 style="margin:0">${me.name}</h2><div class="muted">${me.email}</div></div>
+    <div class="card fmwrap"><div style="display:flex;align-items:center;gap:12px"><div class="av">${initials(me.name)}</div><div><h2 style="margin:0">${esc(me.name)}</h2><div class="muted">${esc(me.email)}</div></div>
       <button class="ghost sm right" onclick="fmSignOut()">Sign out</button></div></div>
-    <div class="card"><h3 class="sg">Your assigned jobs</h3><div class="joblist">${rows}</div></div>`;
-}
+    <div class="card"><h3 class="sg">Your assigned jobs</h3><div class="joblist">${rows}</div></div>`;}
 function openFmJob(id){renderFmJob(id,false);}
 function renderFmJob(id,fromLink){
-  const job=getJob(id); if(!job){renderFmDashboard();return;}
-  const e=job.est,done=job.eta;
+  const job=getJob(id);if(!job){renderFmDashboard();return;}const e=job.est,done=job.eta;
   $('#app').innerHTML=`<div class="modebar">FOREMAN PORTAL</div>
    <div class="card fmwrap"><div style="display:flex;align-items:center;gap:8px"><span class="pill p-info">FOREMAN</span><h2 style="margin:0">Pickup — Job ${job.id}</h2>
-     <button class="ghost sm right" onclick="goForeman()">${fromLink?'My jobs':'← My jobs'}</button></div>
-    <p class="sub" style="margin-top:6px">Assigned to ${job.foreman?job.foreman.name:'you'}. Review the job and confirm your 3-hour pickup window.</p>
-    <div class="grid"><div class="f"><label class="fl">Customer</label><span class="v">${e.customer}</span></div>
-      <div class="f"><label class="fl">Phone</label><span class="v">${e.phone||''}</span></div>
-      <div class="f"><label class="fl">Pickup address</label><span class="v">${e.oAddr}</span></div>
-      <div class="f"><label class="fl">Deliver to</label><span class="v">${e.dAddr}</span></div>
-      <div class="f"><label class="fl">Requested pickup</label><span class="v">${e.pickup}</span></div>
-      <div class="f"><label class="fl">Volume / items</label><span class="v">${e.volume} cf · ${e.items||''}</span></div></div>
-    <h3 class="sg" style="margin-top:14px">Charges</h3>
-    <div class="kv"><span class="k">Total</span><span>${money(e.total)}</span></div><div class="kv"><span class="k">Deposit</span><span>${money(e.deposit)}</span></div></div>
+     <button class="ghost sm right" onclick="goForeman()">My jobs</button></div>
+    <p class="sub" style="margin-top:6px">Assigned to ${esc(job.foreman?job.foreman.name:'you')}. Review the job &amp; inventory, then confirm your 3-hour pickup window.</p>
+    <div class="grid"><div class="f"><label class="fl">Customer</label><span class="v">${esc(e.customer)}</span></div>
+      <div class="f"><label class="fl">Phone</label><span class="v">${esc(e.phone)||''}</span></div>
+      <div class="f"><label class="fl">Pickup${e.oType?' · '+esc(e.oType):''}</label><span class="v">${esc(e.oAddr)}</span></div>
+      <div class="f"><label class="fl">Deliver to${e.dType?' · '+esc(e.dType):''}</label><span class="v">${esc(e.dAddr)}</span></div>
+      <div class="f"><label class="fl">Move</label><span class="v">${e.miles?esc(e.miles)+' mi':''} ${e.moveDay?'· '+esc(e.moveDay):''}</span></div>
+      <div class="f"><label class="fl">Requested pickup</label><span class="v">${esc(e.pickup)}</span></div></div>
+   </div>
+   <div class="card"><h3 class="sg">📦 Inventory — what to expect ${e.inv?`<span class="muted" style="font-weight:600">· ${e.inv.totalPieces} pieces</span>`:''}</h3>
+     ${inventoryHTML(e.inv)}</div>
    <div class="card">
-    ${done?`<div class="banner ok">✓ Pickup window confirmed: <span class="eta">${job.eta.whenLabel}</span>${job.eta.note?' — '+job.eta.note:''}<small>${job.eta.submittedAt}</small></div>
+    ${done?`<div class="banner ok">✓ Pickup window confirmed: <span class="eta">${esc(job.eta.whenLabel)}</span>${job.eta.note?' — '+esc(job.eta.note):''}<small>${job.eta.submittedAt}</small></div>
       <p class="muted" style="margin-top:10px">You can change it below if needed.</p>`:`<h3 class="sg">Confirm your pickup window</h3>`}
     <div class="grid"><div class="f"><label class="fl">Pickup date</label><input type="date" id="etaDate" value="${done?job.eta.date:''}"></div>
       <div class="f"><label class="fl">3-hour arrival window</label><select id="etaWin">
         <option value="">Select a window…</option><option>8:00 – 11:00 AM</option><option>11:00 AM – 2:00 PM</option><option>2:00 – 5:00 PM</option><option>5:00 – 8:00 PM</option></select></div></div>
-    <div class="f" style="margin-top:4px"><label class="fl">Note (optional)</label><input id="etaNote" value="${done&&job.eta.note?job.eta.note:''}" placeholder="e.g. crew of 3, arriving from south"></div>
+    <div class="f" style="margin-top:4px"><label class="fl">Note (optional)</label><input id="etaNote" value="${done&&job.eta.note?esc(job.eta.note):''}" placeholder="e.g. crew of 3, bring dollies for appliances"></div>
     <div class="btnrow"><button onclick="submitETA('${job.id}')">${done?'Update window':'Confirm pickup window →'}</button></div>
-    <p class="muted" style="margin-top:10px">Prototype: saved on this device — it shows on your dashboard and the office board here. Real cross-device sync needs the backend.</p></div>`;
+    <p class="muted" style="margin-top:10px">Prototype: saved on this device — shows on your dashboard and the office board here. Real cross-device sync needs the backend.</p></div>`;
   if(done&&$('#etaWin'))$('#etaWin').value=job.eta.window;
 }
-function submitETA(id){
-  const dt=$('#etaDate').value, win=$('#etaWin').value;
-  if(!dt){alert('Pick a pickup date.');return;}
-  if(!win){alert('Choose a 3-hour arrival window.');return;}
-  const dl=new Date(dt+'T00:00').toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'});
+function submitETA(id){const dt=$('#etaDate').value,win=$('#etaWin').value;
+  if(!dt){alert('Pick a pickup date.');return;}if(!win){alert('Choose a 3-hour arrival window.');return;}
+  const dl=new Date(dt+'T00:00').toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
   const eta={date:dt,window:win,whenLabel:dl+' · '+win,note:$('#etaNote').value.trim(),submittedAt:now()};
-  const job=getJob(id); if(!job)return; job.eta=eta; job.status='Awaiting pickup'; saveJob(job);
-  renderFmJob(id,false); window.scrollTo(0,0);
-}
+  const job=getJob(id);if(!job)return;job.eta=eta;job.status='Awaiting pickup';saveJob(job);renderFmJob(id,false);window.scrollTo(0,0);}
 
 router();
 </script>
