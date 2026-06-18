@@ -189,8 +189,8 @@ function vJob(){
       <div class="linkbox" id="lk">${link}</div>
       <div class="btnrow"><button class="sm" onclick="copyLink('${'fm'}')">📋 Copy link</button>
         <button class="ghost sm" onclick="location.hash='fm='+enc(cur)">Open foreman view →</button></div>
-      ${j.eta?`<div class="banner ok" style="margin-top:14px">✓ Pickup ETA received: <span class="eta">${j.eta.whenLabel}</span>${j.eta.note?' — '+j.eta.note:''}<small>submitted ${j.eta.submittedAt} by ${j.foreman.name}</small></div>`
-        :`<div class="banner info" style="margin-top:14px">Waiting for ${j.foreman.name.split(' ')[0]} to open the link and provide a pickup ETA…</div>`}
+      ${j.eta?`<div class="banner ok" style="margin-top:14px">✓ Pickup window confirmed: <span class="eta">${j.eta.whenLabel}</span>${j.eta.note?' — '+j.eta.note:''}<small>confirmed ${j.eta.submittedAt} by ${j.foreman.name}</small></div>`
+        :`<div class="banner info" style="margin-top:14px">Waiting for ${j.foreman.name.split(' ')[0]} to open the link and confirm a 3-hour pickup window…</div>`}
     </div>`;
   }
   return `<div class="steps"><span class="s done">1. Intake</span><span class="s ${j.foreman?'done':'on'}">2. Assign foreman</span><span class="s ${j.eta?'done':(j.foreman?'on':'')}">3. Pickup ETA</span></div>
@@ -229,18 +229,24 @@ function renderForeman(job){
     <div class="kv"><span class="k">Deposit</span><span>${money(e.deposit)}</span></div>
   </div>
   <div class="card">
-    ${done?`<div class="banner ok">✓ ETA submitted: <span class="eta">${job.eta.whenLabel}</span>${job.eta.note?' — '+job.eta.note:''}<small>${job.eta.submittedAt}</small></div>
-      <p class="muted" style="margin-top:10px">You can update it below if needed.</p>`:`<h3 class="sg">Provide pickup ETA</h3>`}
-    <div class="grid"><div class="f"><label class="fl">Estimated pickup date &amp; time</label><input type="datetime-local" id="etaWhen"></div>
-      <div class="f"><label class="fl">Note (optional)</label><input id="etaNote" placeholder="e.g. crew of 3, arriving from south"></div></div>
-    <div class="btnrow"><button onclick="submitETA('${job.id}')">${done?'Update ETA':'Submit pickup ETA →'}</button></div>
+    ${done?`<div class="banner ok">✓ Pickup window confirmed: <span class="eta">${job.eta.whenLabel}</span>${job.eta.note?' — '+job.eta.note:''}<small>${job.eta.submittedAt}</small></div>
+      <p class="muted" style="margin-top:10px">You can change it below if needed.</p>`:`<h3 class="sg">Confirm your pickup window</h3>`}
+    <div class="grid"><div class="f"><label class="fl">Pickup date</label><input type="date" id="etaDate" value="${done?job.eta.date:''}"></div>
+      <div class="f"><label class="fl">3-hour arrival window</label><select id="etaWin">
+        <option value="">Select a window…</option>
+        <option>8:00 – 11:00 AM</option><option>11:00 AM – 2:00 PM</option><option>2:00 – 5:00 PM</option><option>5:00 – 8:00 PM</option></select></div></div>
+    <div class="f" style="margin-top:4px"><label class="fl">Note (optional)</label><input id="etaNote" value="${done&&job.eta.note?job.eta.note:''}" placeholder="e.g. crew of 3, arriving from south"></div>
+    <div class="btnrow"><button onclick="submitETA('${job.id}')">${done?'Update window':'Confirm pickup window →'}</button></div>
     <p class="muted" style="margin-top:10px">Prototype: your ETA is saved on this device. In production it posts straight back to the dispatch board.</p>
   </div>`;
 }
 function submitETA(id){
-  const w=$('#etaWhen').value;if(!w){alert('Pick an estimated pickup date & time.');return;}
-  const d=new Date(w);const whenLabel=d.toLocaleString([], {weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
-  const eta={when:w,whenLabel,note:$('#etaNote').value.trim(),submittedAt:now()};
+  const dt=$('#etaDate').value, win=$('#etaWin').value;
+  if(!dt){alert('Pick a pickup date.');return;}
+  if(!win){alert('Choose a 3-hour arrival window.');return;}
+  const dl=new Date(dt+'T00:00').toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'});
+  const whenLabel=dl+' · '+win;
+  const eta={date:dt,window:win,whenLabel,note:$('#etaNote').value.trim(),submittedAt:now()};
   // upsert into local storage by id (so dispatch board sees it on same device)
   const jobs=store.get();const i=jobs.findIndex(j=>j.id===id);
   let job; if(i>=0){job=jobs[i];} else { try{job=dec(location.hash.slice(4));}catch(e){job={id};} jobs.unshift(job); }
