@@ -56,6 +56,13 @@
   .it{font-size:13px;padding:2px 0;display:flex;gap:7px} .it .q{font-weight:700;color:var(--muted);min-width:26px}
   .it.sp{color:#7a5200;font-weight:600}
   details.inv{margin-top:8px} details.inv summary{cursor:pointer;font-weight:700;color:var(--navy)}
+  /* job sheet */
+  .sampleband{background:#fbeae7;color:#b3261e;font-weight:700;font-size:11px;text-align:center;border-radius:6px;padding:4px;margin:-2px 0 12px;letter-spacing:.3px}
+  .sheethead{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid var(--navy);padding-bottom:8px}
+  .brand{font-weight:800;font-size:18px;color:var(--navy);letter-spacing:.3px}
+  .note{font-size:13.5px;padding:6px 0;border-bottom:1px dashed var(--line)} .note b{color:var(--navy)} .note:last-child{border:0}
+  .sigline{border-bottom:1px solid #b9c2cf;padding:16px 4px 4px;color:#9aa3af;font-size:12px}
+  @media print{header.app,.noprint{display:none!important} body{background:#fff} .wrap{padding:0;max-width:100%} .card{box-shadow:none;border:0;padding:0}}
   @media(max-width:640px){.grid,.rooms{grid-template-columns:1fr}}
 </style>
 </head>
@@ -272,7 +279,7 @@ function vJob(){
         :`<div class="banner info" style="margin-top:14px">Waiting for ${esc(j.foreman.name.split(' ')[0])} to sign in and confirm a 3-hour pickup window…</div>`}</div>`;
   }
   return `<div class="modebar">OFFICE</div><div class="steps"><span class="s done">1. Intake</span><span class="s ${j.foreman?'done':'on'}">2. Assign foreman</span><span class="s ${j.eta?'done':(j.foreman?'on':'')}">3. Pickup window</span></div>
-    <div class="card"><div style="display:flex;align-items:center;gap:10px"><h2 style="margin:0">Job ${j.id}</h2>${statusPill(j.status)}<button class="ghost sm right" onclick="goOffice()">← Dispatch board</button></div>
+    <div class="card"><div style="display:flex;align-items:center;gap:10px"><h2 style="margin:0">Job ${j.id}</h2>${statusPill(j.status)}<button class="ghost sm right" onclick="openJobSheet('${j.id}','office')">📄 Job sheet</button><button class="ghost sm" onclick="goOffice()">← Board</button></div>
     <p class="sub" style="margin-top:6px">Read by the AI from the broker estimate${e.rep?' · broker rep '+esc(e.rep):''}.</p>
     <div class="grid"><div class="f"><label class="fl">Customer</label><span class="v">${esc(e.customer)}</span></div>
       <div class="f"><label class="fl">Contact</label><span class="v">${esc(e.phone)||''} · ${esc(e.email)||''}</span></div>
@@ -315,7 +322,7 @@ function renderFmJob(id,fromLink){
   const job=getJob(id);if(!job){renderFmDashboard();return;}const e=job.est,done=job.eta;
   $('#app').innerHTML=`<div class="modebar">FOREMAN PORTAL</div>
    <div class="card fmwrap"><div style="display:flex;align-items:center;gap:8px"><span class="pill p-info">FOREMAN</span><h2 style="margin:0">Pickup — Job ${job.id}</h2>
-     <button class="ghost sm right" onclick="goForeman()">My jobs</button></div>
+     <button class="ghost sm right" onclick="openJobSheet('${job.id}','foreman')">📄 Job sheet</button><button class="ghost sm" onclick="goForeman()">My jobs</button></div>
     <p class="sub" style="margin-top:6px">Assigned to ${esc(job.foreman?job.foreman.name:'you')}. Review the job &amp; inventory, then confirm your 3-hour pickup window.</p>
     <div class="grid"><div class="f"><label class="fl">Customer</label><span class="v">${esc(e.customer)}</span></div>
       <div class="f"><label class="fl">Phone</label><span class="v">${esc(e.phone)||''}</span></div>
@@ -342,6 +349,53 @@ function submitETA(id){const dt=$('#etaDate').value,win=$('#etaWin').value;
   const dl=new Date(dt+'T00:00').toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
   const eta={date:dt,window:win,whenLabel:dl+' · '+win,note:$('#etaNote').value.trim(),submittedAt:now()};
   const job=getJob(id);if(!job)return;job.eta=eta;job.status='Awaiting pickup';saveJob(job);renderFmJob(id,false);window.scrollTo(0,0);}
+
+/* ===== JOB SHEET (contract + inventory + crew notes) ===== */
+function crewNotes(e){
+  const notes=[];const acc={House:'House — first flight (14 stairs) included; confirm truck parking & driveway clearance.',Apartment:'Apartment — check floor / elevator / long-carry (possible extra charges); reserve the elevator.',Storage:'Storage facility — confirm access hours, unit number & loading dock.'};
+  if(e.oType)notes.push(['Origin access',acc[e.oType]||e.oType]);
+  if(e.dType)notes.push(['Destination access',acc[e.dType]||e.dType]);
+  const inv=e.inv;
+  if(!inv){notes.push(['Inventory','No itemized inventory on this estimate — confirm contents with the office.']);return notes;}
+  const all=[];inv.rooms.forEach(r=>r.items.forEach(it=>all.push(it)));
+  const has=re=>all.filter(it=>re.test(it.name.toUpperCase()));
+  const clean=it=>(it.qty>1?it.qty+'× ':'')+it.name.replace(/\s*\([^)]*\)/g,'').trim();
+  const sp=has(SPECIAL);if(sp.length)notes.push(['Bulky / special — allow extra time + gear',[...new Set(sp.map(clean))].join(' · ')+'. Bring appliance dolly, straps & ramps.']);
+  let boxes=0;all.forEach(it=>{if(/BOX|PLASTIC BIN|WARDROBE/.test(it.name.toUpperCase()))boxes+=it.qty;});
+  if(boxes)notes.push(['Boxes',boxes+' boxes (incl. wardrobe) — bring wardrobe bars; stack boxes to stabilize the load.']);
+  const pbo=has(/\(PBO\)|\bPBO\b/);if(pbo.length)notes.push(['Packed by owner (PBO) — limited liability',[...new Set(pbo.map(it=>it.name.replace(/\s*\([^)]*\)/g,'').trim()))].join(' · ')+'. Note condition at origin.']);
+  if(has(/BED|DESK|DINING TABLE|TABLE, DINING|CRIB|BUNK/).length)notes.push(['Disassembly likely','Beds, desks, dining table — bring tools; all drawers must be emptied before the move.']);
+  const fr=has(/TV|FLAT SCREEN|PICTURE|PAINTING|MIRROR|GLASS/);if(fr.length)notes.push(['Fragile — pad & box',[...new Set(fr.map(it=>it.name.replace(/\s*\([^)]*\)/g,'').trim()))].slice(0,6).join(' · ')+'. Use TV / picture cartons.']);
+  notes.push(['Reminders','No plastic bags on the truck. Confirm the valuation election ('+e.valuation+') with the customer at signing.']);
+  return notes;
+}
+function openJobSheet(id,mode){renderJobSheet(id,mode);}
+function renderJobSheet(id,mode){
+  const j=getJob(id);if(!j){goOffice();return;}const e=j.est;const back=mode==='foreman'?"openFmJob('"+id+"')":"openJob('"+id+"')";const notes=crewNotes(e);
+  $('#app').innerHTML=`<div class="btnrow noprint" style="margin:0 0 12px"><button class="ghost sm" onclick="${back}">← Back</button><button class="sm" onclick="window.print()">🖨️ Print / Save PDF</button></div>
+   <div class="card" id="sheetdoc"><div class="sampleband">SAMPLE · PROTOTYPE — not a valid contract</div>
+     <div class="sheethead"><div><div class="brand">RUSHMORE VAN LINES</div><div class="muted">Job Sheet · Bill of Lading + Inventory + Crew Notes</div></div>
+       <div style="text-align:right"><div style="font-weight:800;font-size:16px">Job ${j.id}</div><div class="muted">${esc(e.pickup)}${j.eta?' · '+esc(j.eta.whenLabel):''}</div></div></div>
+     <div class="grid" style="margin-top:12px">
+       <div class="f"><label class="fl">Customer</label><span class="v">${esc(e.customer)}</span></div>
+       <div class="f"><label class="fl">Contact</label><span class="v">${esc(e.phone)||''} · ${esc(e.email)||''}</span></div>
+       <div class="f"><label class="fl">Origin${e.oType?' · '+esc(e.oType):''}</label><span class="v">${esc(e.oAddr)}</span></div>
+       <div class="f"><label class="fl">Destination${e.dType?' · '+esc(e.dType):''}</label><span class="v">${esc(e.dAddr)}</span></div>
+       <div class="f"><label class="fl">Move</label><span class="v">${e.miles?esc(e.miles)+' mi':''} ${e.moveDay?'· '+esc(e.moveDay):''}</span></div>
+       <div class="f"><label class="fl">Foreman</label><span class="v">${esc(j.foreman?j.foreman.name:'—')}</span></div></div>
+     <h3 class="sg" style="margin-top:14px">Charges</h3>
+     <div class="kv"><span class="k">Transportation (${e.volume} cf @ $${e.rate})</span><span>${money(e.basic)}</span></div>
+     <div class="kv"><span class="k">Total applicable charges</span><span style="font-weight:800">${money(e.total)}</span></div>
+     <div class="kv"><span class="k">Prepaid deposit · valuation</span><span>${money(e.deposit)} · ${esc(e.valuation)}</span></div>
+     <h3 class="sg" style="margin-top:16px">📋 Extra notes for the team</h3>
+     ${notes.map(n=>`<div class="note"><b>${esc(n[0])}:</b> ${esc(n[1])}</div>`).join('')}
+     <h3 class="sg" style="margin-top:16px">📦 Inventory ${e.inv?'· '+e.inv.totalPieces+' pieces':''}</h3>
+     ${inventoryHTML(e.inv)}
+     <div class="grid" style="margin-top:16px"><div class="f"><label class="fl">Customer signature &amp; date</label><div class="sigline">[ signed on site ]</div></div>
+       <div class="f"><label class="fl">Foreman signature &amp; date</label><div class="sigline">[ signed on site ]</div></div></div>
+   </div>`;
+  window.scrollTo(0,0);
+}
 
 router();
 </script>
