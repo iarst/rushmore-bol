@@ -48,6 +48,8 @@
   .fmwrap{border-top:4px solid var(--teal)}
   .volbar{display:flex;gap:18px;flex-wrap:wrap;background:#eef6fb;border:1px solid #cfe2f3;border-radius:10px;padding:11px 15px;margin:6px 0 14px}
   .volbar .vb{display:flex;flex-direction:column} .volbar .vb .n{font-size:18px;font-weight:800;color:var(--navy)} .volbar .vb .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700}
+  .agday{font-weight:800;color:var(--navy);margin:16px 0 8px;font-size:12.5px;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--line);padding-bottom:5px}
+  .agtime{font-weight:800;color:var(--navy);min-width:118px;font-size:13px}
   /* inventory */
   .chips{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 8px}
   .chip{background:#eef2f7;color:var(--navy);border-radius:20px;padding:4px 11px;font-size:12px;font-weight:700}
@@ -287,7 +289,7 @@ function vJob(){
       <div class="f"><label class="fl">Contact</label><span class="v">${esc(e.phone)||''} · ${esc(e.email)||''}</span></div>
       <div class="f"><label class="fl">Origin${e.oType?' · '+esc(e.oType):''}</label><span class="v">${esc(e.oAddr)}</span></div>
       <div class="f"><label class="fl">Destination${e.dType?' · '+esc(e.dType):''}</label><span class="v">${esc(e.dAddr)}</span></div>
-      <div class="f"><label class="fl">Move type</label><span class="v">${e.miles?'Long distance · '+esc(e.miles)+' mi':'—'} ${e.moveDay?'· '+esc(e.moveDay):''}</span></div>
+      <div class="f"><label class="fl">Move type</label><span class="v">${e.miles?'Long distance · '+esc(e.miles)+' mi':'—'}</span></div>
       <div class="f"><label class="fl">Requested pickup · delivery</label><span class="v">${esc(e.pickup)} · ${esc(e.delivery)}${e.firstDelivery?' (1st avail '+esc(e.firstDelivery)+')':''}</span></div></div>
     <h3 class="sg" style="margin-top:14px">Estimate summary</h3>
     <div class="kv"><span class="k">Volume · rate</span><span>${e.volume} cf @ $${e.rate}</span></div>
@@ -310,38 +312,47 @@ function renderFmLogin(){const fm=foremenStore.get();$('#app').innerHTML=`<div c
 function fmSignIn(){setFm($('#fmLogin').value);renderFmDashboard();}
 function fmSignOut(){setFm(null);renderFmLogin();}
 function fmMe(){const e=getFm();return foremenStore.get().find(f=>f.email===e)||{name:e,email:e};}
+function fmWinOrder(w){return {'8:00 – 11:00 AM':1,'11:00 AM – 2:00 PM':2,'2:00 – 5:00 PM':3,'5:00 – 8:00 PM':4}[w]||9;}
+function fmDateLabel(d){try{return new Date(d+'T00:00').toLocaleDateString([],{weekday:'long',month:'short',day:'numeric',year:'numeric'});}catch(e){return d;}}
+function fmRow(j){return `<div class="jobrow" onclick="openFmJob('${j.id}')">
+    <div class="agtime"${j.eta?'':' style="color:#b9770e"'}>${j.eta?esc(j.eta.window):'needs ETA'}</div>
+    <div style="flex:1"><div class="id">${j.id} · ${esc(j.est?.customer)}</div>
+      <div class="meta">${j.est?.volume||'?'} cf ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} · ${esc((j.est?.oAddr||'').split(',')[0])}</div></div>
+    <div class="right">${j.eta?'<span class="pill p-ok">scheduled</span>':'<span class="pill p-warn">needs ETA</span>'}</div></div>`;}
 function renderFmDashboard(){const me=fmMe();const mine=store.get().filter(j=>j.foreman&&j.foreman.email===me.email);
-  const rows=mine.length?mine.map(j=>`<div class="jobrow" onclick="openFmJob('${j.id}')"><div><div class="id">${j.id} · ${esc(j.est?.customer)}</div>
-    <div class="meta">Pickup: ${esc(j.est?.oAddr)} · ${j.est?.volume||'?'} cf ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} ${j.eta?'· '+esc(j.eta.whenLabel):''}</div></div>
-    <div class="right">${j.eta?'<span class="pill p-ok">window set</span>':'<span class="pill p-warn">needs ETA</span>'}</div></div>`).join('')
-    :'<div class="empty">No jobs assigned to you yet.</div>';
+  const sched=mine.filter(j=>j.eta&&j.eta.date).sort((a,b)=> a.eta.date===b.eta.date? fmWinOrder(a.eta.window)-fmWinOrder(b.eta.window) : (a.eta.date<b.eta.date?-1:1));
+  const todo=mine.filter(j=>!(j.eta&&j.eta.date));
+  let body='';
+  if(todo.length)body+='<div class="agday" style="color:#b9770e">⚠ Needs pickup window</div>'+todo.map(fmRow).join('');
+  let cd=null; sched.forEach(j=>{if(j.eta.date!==cd){cd=j.eta.date;body+='<div class="agday">'+fmDateLabel(cd)+'</div>';}body+=fmRow(j);});
+  if(!mine.length)body='<div class="empty">No jobs assigned to you yet.</div>';
   $('#app').innerHTML=`<div class="modebar">FOREMAN PORTAL</div>
     <div class="card fmwrap"><div style="display:flex;align-items:center;gap:12px"><div class="av">${initials(me.name)}</div><div><h2 style="margin:0">${esc(me.name)}</h2><div class="muted">${esc(me.email)}</div></div>
       <button class="ghost sm right" onclick="fmSignOut()">Sign out</button></div></div>
-    <div class="card"><h3 class="sg">Your assigned jobs</h3><div class="joblist">${rows}</div></div>`;}
+    <div class="card"><h3 class="sg">Your jobs · by date</h3><div class="joblist">${body}</div></div>`;}
 function openFmJob(id){renderFmJob(id,false);}
 function renderFmJob(id,fromLink){
   const job=getJob(id);if(!job){renderFmDashboard();return;}const e=job.est,done=job.eta;
   $('#app').innerHTML=`<div class="modebar">FOREMAN PORTAL</div>
    <div class="card fmwrap"><div style="display:flex;align-items:center;gap:8px"><span class="pill p-info">FOREMAN</span><h2 style="margin:0">Pickup — Job ${job.id}</h2>
      <button class="ghost sm right" onclick="openJobSheet('${job.id}','foreman')">📄 Job sheet</button><button class="ghost sm" onclick="goForeman()">My jobs</button></div>
-    <p class="sub" style="margin-top:6px">Assigned to ${esc(job.foreman?job.foreman.name:'you')}. Review the job &amp; inventory, then confirm your 3-hour pickup window.</p>
+    ${done?`<div class="banner ok" style="margin-top:12px">✓ Pickup window confirmed: <span class="eta">${esc(job.eta.whenLabel)}</span>${job.eta.note?' — '+esc(job.eta.note):''}<small>confirmed ${job.eta.submittedAt}</small></div>`:''}
+    <p class="sub" style="margin-top:6px">Assigned to ${esc(job.foreman?job.foreman.name:'you')}. Review the job &amp; inventory${done?'.':', then confirm your 3-hour pickup window.'}</p>
     <div class="volbar"><div class="vb"><span class="n">${e.volume} cf</span><span class="l">Volume</span></div>
       <div class="vb"><span class="n">${e.inv?e.inv.totalPieces:'—'}</span><span class="l">Pieces</span></div>
       <div class="vb"><span class="n">${e.miles||'—'}</span><span class="l">Miles</span></div>
-      <div class="vb"><span class="n">${esc(e.moveDay||'—')}</span><span class="l">Move day</span></div></div>
+      <div class="vb"><span class="n">${esc(e.pickup||'—')}</span><span class="l">Move dates</span></div></div>
     <div class="grid"><div class="f"><label class="fl">Customer</label><span class="v">${esc(e.customer)}</span></div>
       <div class="f"><label class="fl">Phone</label><span class="v">${esc(e.phone)||''}</span></div>
       <div class="f"><label class="fl">Pickup${e.oType?' · '+esc(e.oType):''}</label><span class="v">${esc(e.oAddr)}</span></div>
       <div class="f"><label class="fl">Deliver to${e.dType?' · '+esc(e.dType):''}</label><span class="v">${esc(e.dAddr)}</span></div>
-      <div class="f"><label class="fl">Move</label><span class="v">${e.miles?esc(e.miles)+' mi':''} ${e.moveDay?'· '+esc(e.moveDay):''}</span></div>
-      <div class="f"><label class="fl">Requested pickup</label><span class="v">${esc(e.pickup)}</span></div></div>
+      <div class="f"><label class="fl">Move</label><span class="v">Long distance${e.miles?' · '+esc(e.miles)+' mi':''}</span></div>
+      <div class="f"><label class="fl">Move dates</label><span class="v">${esc(e.pickup)}</span></div></div>
    </div>
    <div class="card"><h3 class="sg">📦 Inventory — what to expect ${e.inv?`<span class="muted" style="font-weight:600">· ${e.inv.totalPieces} pieces</span>`:''}</h3>
      ${inventoryHTML(e.inv)}</div>
    <div class="card">
-    ${done?`<div class="banner ok">✓ Pickup window confirmed: <span class="eta">${esc(job.eta.whenLabel)}</span>${job.eta.note?' — '+esc(job.eta.note):''}<small>${job.eta.submittedAt}</small></div>
-      <p class="muted" style="margin-top:10px">You can change it below if needed.</p>`:`<h3 class="sg">Confirm your pickup window</h3>`}
+    ${done?`<h3 class="sg">Change pickup window</h3><p class="muted" style="margin:-4px 0 10px">Currently confirmed: ${esc(job.eta.whenLabel)}.</p>`:`<h3 class="sg">Confirm your pickup window</h3>`}
     <div class="grid"><div class="f"><label class="fl">Pickup date</label><input type="date" id="etaDate" value="${done?job.eta.date:''}"></div>
       <div class="f"><label class="fl">3-hour arrival window</label><select id="etaWin">
         <option value="">Select a window…</option><option>8:00 – 11:00 AM</option><option>11:00 AM – 2:00 PM</option><option>2:00 – 5:00 PM</option><option>5:00 – 8:00 PM</option></select></div></div>
@@ -387,7 +398,7 @@ function renderJobSheet(id,mode){
        <div class="f"><label class="fl">Contact</label><span class="v">${esc(e.phone)||''} · ${esc(e.email)||''}</span></div>
        <div class="f"><label class="fl">Origin${e.oType?' · '+esc(e.oType):''}</label><span class="v">${esc(e.oAddr)}</span></div>
        <div class="f"><label class="fl">Destination${e.dType?' · '+esc(e.dType):''}</label><span class="v">${esc(e.dAddr)}</span></div>
-       <div class="f"><label class="fl">Move</label><span class="v">${e.miles?esc(e.miles)+' mi':''} ${e.moveDay?'· '+esc(e.moveDay):''}</span></div>
+       <div class="f"><label class="fl">Move</label><span class="v">${e.miles?esc(e.miles)+' mi':''}${e.pickup?' · '+esc(e.pickup):''}</span></div>
        <div class="f"><label class="fl">Foreman</label><span class="v">${esc(j.foreman?j.foreman.name:'—')}</span></div></div>
      <h3 class="sg" style="margin-top:14px">Charges</h3>
      <div class="kv"><span class="k">Transportation (${e.volume} cf @ $${e.rate})</span><span>${money(e.basic)}</span></div>
