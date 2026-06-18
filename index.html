@@ -75,6 +75,23 @@
   .brand{font-weight:800;font-size:18px;color:var(--navy);letter-spacing:.3px}
   .note{font-size:13.5px;padding:6px 0;border-bottom:1px dashed var(--line)} .note b{color:var(--navy)} .note:last-child{border:0}
   .sigline{border-bottom:1px solid #b9c2cf;padding:16px 4px 4px;color:#9aa3af;font-size:12px}
+  /* BOL on-site fill + sign */
+  .bolsec{border:1px solid var(--line);border-radius:11px;padding:14px 16px;margin-bottom:14px;background:#fff}
+  .bolsec>h4{margin:0 0 10px;font-size:12.5px;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:8px}
+  .bolsec .step{width:22px;height:22px;border-radius:50%;background:var(--navy);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:none}
+  .optrow{display:flex;flex-direction:column;gap:8px;margin:4px 0}
+  .opt{border:1px solid var(--line);border-radius:9px;padding:11px 13px;cursor:pointer;display:flex;gap:10px;align-items:flex-start}
+  .opt.sel{border-color:var(--blue);background:#f2f8fe;box-shadow:inset 0 0 0 1px var(--blue)}
+  .opt input{width:auto;margin-top:3px} .opt .ot{font-weight:700} .opt .od{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .req{color:var(--bad);font-weight:700}
+  .twocol{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 16px} @media(max-width:640px){.twocol{grid-template-columns:1fr}}
+  .chk{display:flex;gap:9px;align-items:flex-start;font-size:14px;margin:7px 0} .chk input{width:auto;margin-top:3px}
+  .padwrap{position:relative;margin-top:4px}
+  .pad{border:1px dashed #b9c2cf;border-radius:10px;background:#fbfdff;touch-action:none;width:100%;height:150px;display:block}
+  .padclear{position:absolute;top:7px;right:9px;font-size:12px;padding:3px 9px;background:#eef2f7;color:var(--navy)}
+  .padlbl{font-size:12px;color:var(--muted);margin-top:5px}
+  .ackbox{background:#f7f9fc;border:1px solid var(--line);border-radius:9px;padding:10px 13px;font-size:12.5px;color:#444;margin-bottom:8px;line-height:1.5}
+  .sigimg{max-height:70px;border-bottom:1px solid #b9c2cf;padding:4px 2px}
   @media print{header.app,.noprint{display:none!important} body{background:#fff} .wrap{padding:0;max-width:100%} .card{box-shadow:none;border:0;padding:0}}
   @media(max-width:640px){.grid,.rooms{grid-template-columns:1fr}}
 </style>
@@ -425,7 +442,7 @@ function newJob(){cur={id:'tmp'+Date.now(),est:null,foreman:null,eta:null,status
 function officeRow(j){return `<div class="jobrow" onclick="openJob('${j.id}')">
     <div class="agtime"${j.eta?'':' style="color:#b9770e"'}>${j.eta?esc(j.eta.window):'needs ETA'}</div>
     <div style="flex:1"><div class="id">${j.id} · ${esc(j.est?.customer)||'—'}</div>
-      <div class="meta">${esc((j.est?.oAddr||'').split(',')[1]||'')} → ${esc((j.est?.dAddr||'').split(',')[1]||'')} ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} ${j.foreman?'· '+esc(j.foreman.name):''}</div></div>
+      <div class="meta">${esc((j.est?.oAddr||'').split(',')[1]||'')} → ${esc((j.est?.dAddr||'').split(',')[1]||'')} ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} ${j.foreman?'· '+esc(j.foreman.name):''}${j.bol&&j.bol.signed?' · <b style="color:#1D9E75">BOL ✓</b>':''}</div></div>
     <div class="right">${statusPill(j.status)}</div></div>`;}
 function vDashboard(){
   const jobs=store.get();
@@ -513,7 +530,7 @@ function fmDateLabel(d){try{return new Date(d+'T00:00').toLocaleDateString([],{w
 function fmRow(j){return `<div class="jobrow" onclick="openFmJob('${j.id}')">
     <div class="agtime"${j.eta?'':' style="color:#b9770e"'}>${j.eta?esc(j.eta.window):'needs ETA'}</div>
     <div style="flex:1"><div class="id">${j.id} · ${esc(j.est?.customer)}</div>
-      <div class="meta">${j.est?.volume||'?'} cf ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} · ${esc((j.est?.oAddr||'').split(',')[0])}</div></div>
+      <div class="meta">${j.est?.volume||'?'} cf ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} · ${esc((j.est?.oAddr||'').split(',')[0])}${j.bol&&j.bol.signed?' · <b style="color:#1D9E75">BOL ✓</b>':''}</div></div>
     <div class="right">${j.eta?'<span class="pill p-ok">scheduled</span>':'<span class="pill p-warn">needs ETA</span>'}</div></div>`;}
 function renderFmDashboard(){const me=fmMe();const mine=store.get().filter(j=>j.foreman&&j.foreman.email===me.email);
   const sched=mine.filter(j=>j.eta&&j.eta.date).sort((a,b)=> a.eta.date===b.eta.date? fmWinOrder(a.eta.window)-fmWinOrder(b.eta.window) : (a.eta.date<b.eta.date?-1:1));
@@ -530,9 +547,10 @@ function openFmJob(id){renderFmJob(id,false);}
 function renderFmJob(id,fromLink){
   const job=getJob(id);if(!job){renderFmDashboard();return;}const e=job.est,done=job.eta;
   $('#app').innerHTML=`<div class="modebar">FOREMAN PORTAL</div>
-   <div class="card fmwrap"><div style="display:flex;align-items:center;gap:8px"><span class="pill p-info">FOREMAN</span><h2 style="margin:0">Pickup — Job ${job.id}</h2>
+   <div class="card fmwrap"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="pill p-info">FOREMAN</span><h2 style="margin:0">Pickup — Job ${job.id}</h2>
      <button class="ghost sm right" onclick="openJobSheet('${job.id}','foreman')">📄 Job sheet</button><button class="ghost sm" onclick="goForeman()">My jobs</button></div>
     ${done?`<div class="banner ok" style="margin-top:12px">✓ Pickup window confirmed: <span class="eta">${esc(job.eta.whenLabel)}</span>${job.eta.note?' — '+esc(job.eta.note):''}<small>confirmed ${job.eta.submittedAt}</small></div>`:''}
+    ${job.bol&&job.bol.signed?`<div class="banner ok" style="margin-top:12px">✅ Bill of Lading signed by ${esc(e.customer)} &amp; ${esc(job.foreman?job.foreman.name:'foreman')}<small>${job.bol.signedAt} · <a href="javascript:void(0)" onclick="openBOL('${job.id}')">view / re-open</a></small></div>`:`<div class="banner info" style="margin-top:12px">📝 On site? <a href="javascript:void(0)" onclick="openBOL('${job.id}')"><b>Fill &amp; sign the Bill of Lading →</b></a></div>`}
     <p class="sub" style="margin-top:6px">Assigned to ${esc(job.foreman?job.foreman.name:'you')}. Review the job &amp; inventory${done?'.':', then confirm your 3-hour pickup window.'}</p>
     <div class="volbar"><div class="vb"><span class="n">${e.volume} cf</span><span class="l">Volume</span></div>
       <div class="vb"><span class="n">${e.inv?e.inv.totalPieces:'—'}</span><span class="l">Pieces</span></div>
@@ -612,6 +630,136 @@ function renderJobSheet(id,mode){
      <div class="grid" style="margin-top:16px"><div class="f"><label class="fl">Customer signature &amp; date</label><div class="sigline">[ signed on site ]</div></div>
        <div class="f"><label class="fl">Foreman signature &amp; date</label><div class="sigline">[ signed on site ]</div></div></div>
    </div>`;
+  window.scrollTo(0,0);
+}
+
+/* ===== ON-SITE BILL OF LADING — fill + dual e-signature (Phase 1) ===== */
+let _bolSeed=null;
+function bolSeed(job){const e=job.est||{},b=job.bol||{};
+  return Object.assign({vanNo:'',crew:'',actualPickup:(job.eta&&job.eta.date)||'',deliverNoLater:'',firstAvail:e.firstDelivery||'',
+    secPhone:'',enrouteName:'',enroutePhone:'',
+    valuation:/Full Value/i.test(e.valuation||'')?'full':'waiver',declaredValue:'',fvpEstimate:'',
+    stairsO:false,stairsD:false,stairsFlights:'',elevatorO:false,elevatorD:false,longCarryO:false,longCarryD:false,shuttleO:false,shuttleD:false,extraLaborHrs:'',
+    fullPack:!!e.fullPack,materialsNote:'',
+    storage:false,storageStart:'',storageEnd:'',ttAccess:true,dwellingO:e.oType||'',dwellingD:e.dType||'',accessDenied:false,accessExplain:'',
+    originAmt:'',method:'',exceptions:'',consent:false,custSig:'',foreSig:''},b);}
+function openBOL(id){renderBOL(id);}
+function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e=job.est||{};const p=payments(e);const s=_bolSeed=bolSeed(job);
+  try{if(navigator.geolocation)navigator.geolocation.getCurrentPosition(g=>{window._geo={lat:+g.coords.latitude.toFixed(5),lng:+g.coords.longitude.toFixed(5),at:now()};},()=>{},{timeout:6000});}catch(_){}
+  const dw=v=>['House','Apartment','Storage','Private Home','Walk-Up','Elevator'].map(o=>`<option ${v===o?'selected':''}>${o}</option>`).join('');
+  $('#app').innerHTML=`<div class="modebar">FOREMAN PORTAL · ON-SITE BILL OF LADING</div>
+  <div class="card fmwrap"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="pill p-info">BOL</span><h2 style="margin:0">Bill of Lading — Job ${job.id}</h2>
+    <button class="ghost sm right" onclick="openFmJob('${job.id}')">← Back to job</button></div>
+    <p class="sub" style="margin-top:6px">Pre-filled from the estimate. Confirm, complete the on-site fields, then sign with the customer. <span class="req">*</span> = required.</p>
+
+   <div class="bolsec"><h4><span class="step">1</span> Trip &amp; dates</h4>
+     <div class="twocol">
+       <div class="f"><label class="fl">Van #</label><input id="b_van" value="${esc(s.vanNo)}" placeholder="e.g. RVL-204"></div>
+       <div class="f"><label class="fl">Crew size</label><input id="b_crew" value="${esc(s.crew)}" placeholder="e.g. 3"></div>
+       <div class="f"><label class="fl">Actual pick-up date <span class="req">*</span></label><input type="date" id="b_actualPickup" value="${esc(s.actualPickup)}"></div>
+       <div class="f"><label class="fl">1st available delivery</label><input type="date" id="b_firstAvail" value="${esc(s.firstAvail)}"></div>
+       <div class="f"><label class="fl">Delivery no later than</label><input type="date" id="b_deliverNoLater" value="${esc(s.deliverNoLater)}"></div>
+       <div class="f"><label class="fl">Secondary phone</label><input id="b_secPhone" value="${esc(s.secPhone)}"></div>
+       <div class="f"><label class="fl">En-route contact name</label><input id="b_enrouteName" value="${esc(s.enrouteName)}"></div>
+       <div class="f"><label class="fl">En-route contact phone</label><input id="b_enroutePhone" value="${esc(s.enroutePhone)}"></div></div></div>
+
+   <div class="bolsec"><h4><span class="step">2</span> Valuation — customer must choose <span class="req">*</span></h4>
+     <div class="optrow">
+       <label class="opt ${s.valuation==='full'?'sel':''}" onclick="bolSel(this)"><input type="radio" name="b_val" value="full" ${s.valuation==='full'?'checked':''}><div><div class="ot">Option 1 — Full (Replacement) Value Protection</div><div class="od">Most coverage; valuation charge may apply. Customer may declare a higher value below.</div></div></label>
+       <label class="opt ${s.valuation==='waiver'?'sel':''}" onclick="bolSel(this)"><input type="radio" name="b_val" value="waiver" ${s.valuation==='waiver'?'checked':''}><div><div class="ot">Option 2 — Waiver, Released Value 60¢ / lb per article</div><div class="od">Minimal protection at no extra cost. Customer initials this election at signing.</div></div></label></div>
+     <div class="twocol" style="margin-top:8px">
+       <div class="f"><label class="fl">Declared total value (Option 1)</label><input id="b_declaredValue" value="${esc(s.declaredValue)}" placeholder="$"></div>
+       <div class="f"><label class="fl">FVP cost estimate (carrier)</label><input id="b_fvpEstimate" value="${esc(s.fvpEstimate)}" placeholder="$"></div></div></div>
+
+   <div class="bolsec"><h4><span class="step">3</span> Accessorials performed (AS-22)</h4>
+     <div class="twocol">
+       <label class="chk"><input type="checkbox" id="b_stairsO" ${s.stairsO?'checked':''}> Stairs — origin</label>
+       <label class="chk"><input type="checkbox" id="b_stairsD" ${s.stairsD?'checked':''}> Stairs — destination</label>
+       <label class="chk"><input type="checkbox" id="b_elevatorO" ${s.elevatorO?'checked':''}> Elevator — origin</label>
+       <label class="chk"><input type="checkbox" id="b_elevatorD" ${s.elevatorD?'checked':''}> Elevator — destination</label>
+       <label class="chk"><input type="checkbox" id="b_longCarryO" ${s.longCarryO?'checked':''}> Long carry — origin</label>
+       <label class="chk"><input type="checkbox" id="b_longCarryD" ${s.longCarryD?'checked':''}> Long carry — destination</label>
+       <label class="chk"><input type="checkbox" id="b_shuttleO" ${s.shuttleO?'checked':''}> Shuttle — origin</label>
+       <label class="chk"><input type="checkbox" id="b_shuttleD" ${s.shuttleD?'checked':''}> Shuttle — destination</label></div>
+     <div class="twocol" style="margin-top:8px">
+       <div class="f"><label class="fl">Stair flights (beyond 1st)</label><input id="b_stairsFlights" value="${esc(s.stairsFlights)}" placeholder="e.g. 2"></div>
+       <div class="f"><label class="fl">Extra labor hours</label><input id="b_extraLaborHrs" value="${esc(s.extraLaborHrs)}" placeholder="hrs"></div></div></div>
+
+   <div class="bolsec"><h4><span class="step">4</span> Packing &amp; bulky (PMS-19)</h4>
+     <label class="chk"><input type="checkbox" id="b_fullPack" ${s.fullPack?'checked':''}> Full packing performed</label>
+     ${bulkyList(e).length?`<div class="muted" style="margin:6px 0;color:#7a5200">⚠ Bulky from inventory: ${esc(bulkyList(e).join(' · '))}</div>`:''}
+     <div class="f"><label class="fl">Materials / notes</label><input id="b_materialsNote" value="${esc(s.materialsNote)}" placeholder="e.g. 20 dish packs, 4 wardrobe boxes, TV cartons"></div></div>
+
+   <div class="bolsec"><h4><span class="step">5</span> Long-distance form (LDF-08)</h4>
+     <label class="chk"><input type="checkbox" id="b_storage" ${s.storage?'checked':''}> Storage in transit needed</label>
+     <div class="twocol"><div class="f"><label class="fl">Storage start</label><input type="date" id="b_storageStart" value="${esc(s.storageStart)}"></div>
+       <div class="f"><label class="fl">Storage end</label><input type="date" id="b_storageEnd" value="${esc(s.storageEnd)}"></div></div>
+     <label class="chk" style="margin-top:8px"><input type="checkbox" id="b_ttAccess" ${s.ttAccess?'checked':''}> Tractor-trailer (72 ft) access available (uncheck if shuttle needed)</label>
+     <div class="twocol"><div class="f"><label class="fl">Dwelling — origin</label><select id="b_dwellingO">${dw(s.dwellingO)}</select></div>
+       <div class="f"><label class="fl">Dwelling — destination</label><select id="b_dwellingD">${dw(s.dwellingD)}</select></div></div>
+     <label class="chk" style="margin-top:8px"><input type="checkbox" id="b_accessDenied" ${s.accessDenied?'checked':''}> Times access may be denied</label>
+     <div class="f"><label class="fl">If yes, explain</label><input id="b_accessExplain" value="${esc(s.accessExplain)}"></div></div>
+
+   <div class="bolsec"><h4><span class="step">6</span> Payment collected</h4>
+     <div class="ackbox">Total ${money(e.total)} − deposit ${money(e.deposit)} = <b>balance due ${money(p.bal)}</b>. Origin payment is collected before loading; the rest is due at delivery.</div>
+     <div class="twocol"><div class="f"><label class="fl">Origin payment collected</label><input id="b_originAmt" value="${esc(s.originAmt)}" placeholder="$"></div>
+       <div class="f"><label class="fl">Method</label><select id="b_method"><option value="">Select…</option>${['Credit card','Cashiers check','Personal check','Postal money order','Cash','App'].map(o=>`<option ${s.method===o?'selected':''}>${o}</option>`).join('')}</select></div></div></div>
+
+   <div class="bolsec"><h4><span class="step">7</span> Condition &amp; exceptions</h4>
+     <div class="f"><label class="fl">Damage / exceptions noted at pickup (shown on delivery acknowledgement)</label><textarea id="b_exceptions" rows="3" placeholder="e.g. scratch on dresser top, dent on washer door">${esc(s.exceptions)}</textarea></div></div>
+
+   <div class="bolsec"><h4><span class="step">8</span> Acknowledge &amp; sign <span class="req">*</span></h4>
+     <div class="ackbox">By signing, the customer acknowledges receiving a copy of this Bill of Lading and the "Your Rights and Responsibilities When You Move" booklet, agrees to the terms and the valuation option selected above, and confirms the goods/exceptions as noted. The foreman signs on behalf of Rushmore Van Lines.</div>
+     <label class="chk"><input type="checkbox" id="b_consent"> <span>The customer consents to sign this Bill of Lading electronically on this device. <span class="req">*</span></span></label>
+     <div style="margin-top:10px"><div class="padlbl"><b>Customer signature</b> — ${esc(e.customer)} <span class="req">*</span></div>
+       <div class="padwrap"><canvas class="pad" id="b_custSig"></canvas><button class="padclear" type="button" onclick="padClear('b_custSig')">Clear</button></div></div>
+     <div style="margin-top:12px"><div class="padlbl"><b>Foreman signature</b> — ${esc(job.foreman?job.foreman.name:'foreman')} (Rushmore) <span class="req">*</span></div>
+       <div class="padwrap"><canvas class="pad" id="b_foreSig"></canvas><button class="padclear" type="button" onclick="padClear('b_foreSig')">Clear</button></div></div>
+     <div class="btnrow"><button onclick="generateBOL('${job.id}')">✅ Sign &amp; generate Bill of Lading</button><button class="ghost" onclick="openFmJob('${job.id}')">Cancel</button></div>
+     <p class="muted" style="margin-top:10px">Captures timestamp, device &amp; (if allowed) location for the audit trail. Next: this becomes the real 5-page PDF and is emailed to the customer (Phase 2–3).</p></div>`;
+  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');if(s.custSig)padRestore('b_custSig',s.custSig);if(s.foreSig)padRestore('b_foreSig',s.foreSig);},30);
+  window.scrollTo(0,0);
+}
+function bolSel(el){[...el.parentNode.querySelectorAll('.opt')].forEach(o=>o.classList.remove('sel'));el.classList.add('sel');el.querySelector('input').checked=true;}
+function padSetup(id){const c=document.getElementById(id);if(!c)return;const r=c.getBoundingClientRect();const dpr=window.devicePixelRatio||1;c.width=Math.max(1,r.width*dpr);c.height=Math.max(1,r.height*dpr);const ctx=c.getContext('2d');ctx.scale(dpr,dpr);ctx.lineWidth=2.2;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#13294b';c.dataset.drawn='';let drawing=false,last=null;
+  const pos=ev=>{const b=c.getBoundingClientRect();const t=(ev.touches&&ev.touches[0])||ev;return{x:t.clientX-b.left,y:t.clientY-b.top};};
+  const down=ev=>{drawing=true;last=pos(ev);ev.preventDefault();};
+  const mv=ev=>{if(!drawing)return;const q=pos(ev);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(q.x,q.y);ctx.stroke();last=q;c.dataset.drawn='1';ev.preventDefault();};
+  const up=()=>{drawing=false;};
+  c.addEventListener('pointerdown',down);c.addEventListener('pointermove',mv);window.addEventListener('pointerup',up);}
+function padClear(id){const c=document.getElementById(id);if(!c)return;c.getContext('2d').clearRect(0,0,c.width,c.height);c.dataset.drawn='';}
+function padRestore(id,url){const c=document.getElementById(id);if(!c)return;const ctx=c.getContext('2d'),dpr=window.devicePixelRatio||1,img=new Image();img.onload=()=>ctx.drawImage(img,0,0,c.width/dpr,c.height/dpr);img.src=url;c.dataset.drawn='1';}
+function padData(id){const c=document.getElementById(id);return c&&c.dataset.drawn?c.toDataURL('image/png'):'';}
+function generateBOL(id){const v=s=>{const el=document.getElementById(s);return el?el.value.trim():'';};const ck=s=>{const el=document.getElementById(s);return!!(el&&el.checked);};
+  const val=(document.querySelector('input[name=b_val]:checked')||{}).value||'';
+  const cust=padData('b_custSig'),fore=padData('b_foreSig');const miss=[];
+  if(!v('b_actualPickup'))miss.push('actual pick-up date');if(!val)miss.push('valuation option');if(!ck('b_consent'))miss.push('customer consent');if(!cust)miss.push('customer signature');if(!fore)miss.push('foreman signature');
+  if(miss.length){alert('Please complete: '+miss.join(', '));return;}
+  const job=getJob(id);if(!job)return;
+  const bol=Object.assign({},_bolSeed||{},{vanNo:v('b_van'),crew:v('b_crew'),actualPickup:v('b_actualPickup'),deliverNoLater:v('b_deliverNoLater'),firstAvail:v('b_firstAvail'),
+    secPhone:v('b_secPhone'),enrouteName:v('b_enrouteName'),enroutePhone:v('b_enroutePhone'),
+    valuation:val,declaredValue:v('b_declaredValue'),fvpEstimate:v('b_fvpEstimate'),
+    stairsO:ck('b_stairsO'),stairsD:ck('b_stairsD'),stairsFlights:v('b_stairsFlights'),elevatorO:ck('b_elevatorO'),elevatorD:ck('b_elevatorD'),longCarryO:ck('b_longCarryO'),longCarryD:ck('b_longCarryD'),shuttleO:ck('b_shuttleO'),shuttleD:ck('b_shuttleD'),extraLaborHrs:v('b_extraLaborHrs'),
+    fullPack:ck('b_fullPack'),materialsNote:v('b_materialsNote'),
+    storage:ck('b_storage'),storageStart:v('b_storageStart'),storageEnd:v('b_storageEnd'),ttAccess:ck('b_ttAccess'),dwellingO:v('b_dwellingO'),dwellingD:v('b_dwellingD'),accessDenied:ck('b_accessDenied'),accessExplain:v('b_accessExplain'),
+    originAmt:v('b_originAmt'),method:v('b_method'),exceptions:v('b_exceptions'),
+    consent:true,custSig:cust,foreSig:fore,signed:true,signedAt:now(),device:(navigator.userAgent||'').slice(0,70),geo:window._geo||null});
+  job.bol=bol;saveJob(job);renderBOLDone(id);}
+function renderBOLDone(id){const job=getJob(id);const e=job.est||{},b=job.bol||{};const valLbl=b.valuation==='full'?'Option 1 — Full Value Protection':'Option 2 — Waiver (60¢/lb)';
+  $('#app').innerHTML=`<div class="modebar">FOREMAN PORTAL</div>
+   <div class="card fmwrap"><div class="banner ok" style="margin-top:0">✅ Bill of Lading signed — Job ${job.id}<small>${esc(b.signedAt)}${b.geo?' · GPS '+b.geo.lat+','+b.geo.lng:''}</small></div>
+     <div class="grid" style="margin-top:14px">
+       <div class="f"><label class="fl">Customer</label><span class="v">${esc(e.customer)}</span></div>
+       <div class="f"><label class="fl">Valuation</label><span class="v">${esc(valLbl)}</span></div>
+       <div class="f"><label class="fl">Actual pick-up</label><span class="v">${esc(b.actualPickup)}</span></div>
+       <div class="f"><label class="fl">Van # · crew</label><span class="v">${esc(b.vanNo||'—')} · ${esc(b.crew||'—')}</span></div>
+       <div class="f"><label class="fl">Origin payment</label><span class="v">${b.originAmt?money(num(b.originAmt)):'—'} ${b.method?'· '+esc(b.method):''}</span></div>
+       <div class="f"><label class="fl">Exceptions</label><span class="v">${esc(b.exceptions||'none noted')}</span></div></div>
+     <div class="twocol" style="margin-top:12px">
+       <div class="f"><label class="fl">Customer signature</label>${b.custSig?`<img class="sigimg" src="${b.custSig}">`:'—'}</div>
+       <div class="f"><label class="fl">Foreman signature</label>${b.foreSig?`<img class="sigimg" src="${b.foreSig}">`:'—'}</div></div>
+     <div class="ackbox" style="margin-top:14px">📄 <b>Next (Phase 2–3):</b> this signed data becomes the real 5-page PDF Bill of Lading and is emailed to the customer + stored. Those steps run on the backend.</div>
+     <div class="btnrow"><button class="ghost" onclick="openBOL('${job.id}')">Re-open / edit</button><button onclick="openFmJob('${job.id}')">Done → back to job</button></div></div>`;
   window.scrollTo(0,0);
 }
 
