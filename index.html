@@ -51,6 +51,14 @@
   .agday{font-weight:800;color:var(--navy);margin:16px 0 8px;font-size:12.5px;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--line);padding-bottom:5px}
   .agtime{font-weight:800;color:var(--navy);min-width:118px;font-size:13px}
   .paybar{background:#e7f6ef;border:1px solid #bfe6d4;border-radius:10px;padding:11px 15px;margin:0 0 14px;font-size:15px;color:#0f6e56} .paybar b{font-size:18px} .paybar .sm2{font-size:12px;color:#3a7a63}
+  /* extra services + customer notes */
+  .svc{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 2px}
+  .svc .b{border-radius:20px;padding:5px 12px;font-size:12.5px;font-weight:800;letter-spacing:.2px}
+  .svc .b.pgs{background:#ede9fe;color:#5b21b6} .svc .b.pack{background:#dcfce7;color:#166534} .svc .b.exp{background:#fee2e2;color:#991b1b} .svc .b.bulk{background:var(--warnbg);color:var(--warn)}
+  .callout{background:var(--warnbg);border:1px solid #f0d9a8;border-left:5px solid var(--warn);border-radius:10px;padding:12px 15px;margin:12px 0}
+  .callout.note{background:#fff8e6} .callout.bulk{background:var(--warnbg)}
+  .callout .ct{font-weight:800;color:var(--warn);font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+  .callout .ci{font-size:15px;color:#6b4e07;font-weight:600;line-height:1.45}
   /* inventory */
   .chips{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 8px}
   .chip{background:#eef2f7;color:var(--navy);border-radius:20px;padding:4px 11px;font-size:12px;font-weight:700}
@@ -87,9 +95,7 @@ const num=v=>{if(v===''||v==null)return null;const n=parseFloat(String(v).replac
 function payments(e){const total=+(e&&e.total)||0,dep=+(e&&e.deposit)||0;const bal=Math.round((total-dep)*100)/100;const atPickup=Math.round(bal/2*100)/100;return {total,dep,bal,atPickup,atDelivery:Math.round((bal-atPickup)*100)/100};}
 function paymentRows(e){const p=payments(e);return `<div class="kv"><span class="k">Total</span><span>${money(p.total)}</span></div>
   <div class="kv"><span class="k">Deposit (paid at booking)</span><span>−${money(p.dep)}</span></div>
-  <div class="kv"><span class="k" style="font-weight:700">Balance (total − deposit)</span><span style="font-weight:700">${money(p.bal)}</span></div>
-  <div class="kv"><span class="k">💵 Collect at pickup (½ of balance)</span><span style="font-weight:800;color:var(--navy)">${money(p.atPickup)}</span></div>
-  <div class="kv"><span class="k">Due at delivery (remaining ½)</span><span>${money(p.atDelivery)}</span></div>`;}
+  <div class="kv"><span class="k" style="font-weight:700">Balance due (total − deposit)</span><span style="font-weight:800;color:var(--navy)">${money(p.bal)}</span></div>`;}
 const now=()=>new Date().toLocaleString();
 const enc=o=>btoa(unescape(encodeURIComponent(JSON.stringify(o))));
 const dec=s=>JSON.parse(decodeURIComponent(escape(atob(s))));
@@ -176,6 +182,153 @@ OUT DOOR FURNITURE
 1 PATIO COFFEE TABLE
 6 PATIO CHAIR`;
 
+const SAMPLE_PGS=`From: Demo Broker <broker@example.com>
+Subject: Moving Estimate - Job 26169911
+Customer Rep: Marcus Lee  (561) 807-2210
+
+Customer: Marcus Webb   (480) 555-1042   marcus.webb@example.com
+Moving From: 4420 E Camelback Rd, Phoenix, AZ 85018  (Apartment)
+Moving To: 1875 Pearl St, Denver, CO 80203  (House)
+Move Type: Long Distance, 862 miles
+Move Day: Monday/Tuesday
+Estimated Volume: 980 cf    Rate: $2.15 per cf
+Basic Estimate Price: $2,107.00
+PGS Delivery: Yes (Premium Guaranteed pickup window)
+Total Moving Estimate: $5,640.00
+Customer Payment (deposit): $2,256.00
+Valuation: 60c/lb waiver
+Requested pickup: 07/06–07/07/2026   Delivery: 07/10/2026
+1st Available Delivery: 07/09/2026
+Special Instructions: Narrow street, no 18ft truck access — shuttle likely needed. Origin is a 3rd floor walk-up. Call customer 45 min before arrival.
+
+Articles List 32 Items 78 Pieces
+LIVING ROOM
+1 SOFA, 3 CUSHION
+1 TV FLAT SCREEN- 33-60 (PKG $110.00)
+2 TABLE, END
+1 AREA RUG, 5X7
+BEDROOM 1
+1 BED, QUEEN
+1 DRESSER, DOUBLE
+2 NIGHT STAND
+KITCHEN
+20 BOX, DISH PACK
+1 REFRIGERATOR
+GENERAL
+1 BICYCLE
+1 TREADMILL (200 BULK FEE)
+8 BOX, MEDIUM`;
+
+const SAMPLE_BULKY=`From: Demo Broker <broker@example.com>
+Subject: Moving Estimate - Job 26106431
+Customer Rep: Tanya Brooks  (561) 807-3390
+
+Customer: Elena Ortiz   (915) 555-7781   elena.ortiz@example.com
+Moving From: 2210 Wurzbach Rd, San Antonio, TX 78229  (House)
+Moving To: 600 Congress Ave, Austin, TX 78701  (House)
+Move Type: Long Distance, 80 miles
+Move Day: Wednesday/Thursday
+Estimated Volume: 1820 cf    Rate: $1.95 per cf
+Basic Estimate Price: $3,549.00
+Total Moving Estimate: $7,980.00
+Customer Payment (deposit): $3,192.00
+Valuation: Full Value Protection
+Requested pickup: 06/24–06/25/2026   Delivery: 06/26/2026
+1st Available Delivery: 06/26/2026
+Special Instructions: Upright piano in living room must load first — customer requests piano board and a 4-man crew. Gun safe ~600 lb in garage, bring safe dolly. Do NOT stack anything on the marble dining table.
+
+Articles List 41 Items 119 Pieces
+LIVING ROOM
+1 PIANO, UPRIGHT (300 BULK FEE)
+1 SOFA, SECTIONAL-2 PIECE
+1 TV FLAT SCREEN- 60+ (PKG $125.00)
+GARAGE
+1 GUN SAFE, LARGE (250 BULK FEE)
+1 WORKBENCH
+1 LAWNMOWER, RIDE (150 BULK FEE)
+DINING ROOM
+1 TABLE, DINING MARBLE
+6 Dining Chair
+1 CHINA HUTCH
+MASTER BEDROOM
+1 BED, KING
+1 DRESSER, TRIPLE
+30 BOX, MEDIUM`;
+
+const SAMPLE_PACK=`From: Demo Broker <broker@example.com>
+Subject: Moving Estimate - Job 26018814
+Customer Rep: Priya Nair  (561) 807-4408
+
+Customer: David Kim   (206) 555-3320   david.kim@example.com
+Moving From: 1200 Western Ave, Seattle, WA 98101  (Apartment)
+Moving To: 901 NW 23rd Ave, Portland, OR 97210  (Apartment)
+Move Type: Long Distance, 174 miles
+Move Day: Friday/Saturday
+Estimated Volume: 1240 cf    Rate: $2.05 per cf
+Basic Estimate Price: $2,542.00
+Full Packing: Yes
+Total Moving Estimate: $6,710.00
+Customer Payment (deposit): $2,684.00
+Valuation: Full Value Protection
+Requested pickup: 07/17–07/18/2026   Delivery: 07/20/2026
+1st Available Delivery: 07/19/2026
+Special Instructions: Full pack ordered — crew brings all materials. Reserve freight elevator at BOTH buildings (origin elevator must be booked 24h ahead; dock on Western Ave). Fragile art — 6 framed pieces, customer wants mirror cartons and extra padding.
+
+Articles List 38 Items 96 Pieces
+LIVING ROOM
+1 SOFA, 2 LOVESEAT
+6 PICTURE/PAINTING, LARGE (PKG $45.00)
+1 TV FLAT SCREEN- 33-60 (PKG $110.00)
+1 BOOKCASE, LARGE
+OFFICE
+1 DESK, EXECUTIVE
+1 FILE CABINET, 4 DRAWER
+12 BOX, BOOK/SMALL
+BEDROOM 1
+1 BED, QUEEN
+1 ARMOIRE
+GENERAL
+25 BOX, MEDIUM
+4 BOX, WARDROBE`;
+
+const SAMPLE_STORAGE=`From: Demo Broker <broker@example.com>
+Subject: Moving Estimate - Job 26201050
+Customer Rep: Greg Sanders  (561) 807-5567
+
+Customer: Aisha Bello   (312) 555-9043   aisha.bello@example.com
+Moving From: 233 S Wacker Dr, Chicago, IL 60606  (Storage)
+Moving To: 1400 N Meridian St, Indianapolis, IN 46202  (Apartment)
+Move Type: Long Distance, 184 miles
+Move Day: Tuesday/Wednesday
+Estimated Volume: 760 cf    Rate: $2.25 per cf
+Basic Estimate Price: $1,710.00
+PGS Delivery: Yes (Premium Guaranteed)
+Expedited Delivery: Yes (2-day guaranteed)
+Total Moving Estimate: $4,980.00
+Customer Payment (deposit): $1,992.00
+Valuation: 60c/lb waiver
+Requested pickup: 06/30–07/01/2026   Delivery: 07/02/2026
+1st Available Delivery: 07/02/2026
+Special Instructions: Origin is a storage facility, unit 4118 — access hours 8a-6p. Destination building REQUIRES a Certificate of Insurance submitted 48h before the move; loading dock B only, max 2-hour dock window.
+
+Articles List 22 Items 54 Pieces
+GENERAL
+40 BOX, MEDIUM
+1 BED, QUEEN
+1 DRESSER, DOUBLE
+1 SOFA, 2 LOVESEAT
+1 TV FLAT SCREEN- 33-60 (PKG $110.00)
+1 BICYCLE
+1 WASHING MACHINE
+1 DRYER`;
+
+const SAMPLES=[
+  {label:'1 · Akutsu — large house, bulky garage (Job 90000001)',text:SAMPLE_EMAIL},
+  {label:'2 · Webb — PGS premium + narrow-street shuttle (Job 26169911)',text:SAMPLE_PGS},
+  {label:'3 · Ortiz — piano + 600 lb gun safe, bulky (Job 26106431)',text:SAMPLE_BULKY},
+  {label:'4 · Kim — full pack + fragile art, elevators (Job 26018814)',text:SAMPLE_PACK},
+  {label:'5 · Bello — storage + expedited + COI required (Job 26201050)',text:SAMPLE_STORAGE}];
+
 /* ---------- extraction ---------- */
 function extract(text){
   const g=(re,d='')=>{const m=text.match(re);return m?m[1].trim():d;};const n=re=>num(g(re));
@@ -187,7 +340,11 @@ function extract(text){
     miles:g(/Long Distance,\s*([\d,]+)\s*miles/i),moveDay:g(/Move Day:\s*([A-Za-z\/]+)/i),
     volume:n(/Volume:\s*([\d,]+)/i),rate:n(/Rate:\s*\$?([\d.]+)/i),basic:n(/Basic[^$]*\$([\d,]+\.?\d*)/i),
     total:n(/Total[^$]*\$([\d,]+\.?\d*)/i),deposit:n(/(?:deposit|Customer Payment)[^$]*\$([\d,]+\.?\d*)/i),
-    valuation:/60c|60¢|0\.60|waiver/i.test(text)?'60¢/lb waiver':'See estimate',
+    valuation:/Full Value/i.test(text)?'Full Value Protection':(/60c|60¢|0\.60|waiver/i.test(text)?'60¢/lb waiver':'See estimate'),
+    pgs:/\bPGS\b|Premium Guaranteed/i.test(text),
+    fullPack:/Full Pack(?:ing)?\s*:?\s*Yes|Full Pack(?:ing)?\b/i.test(text),
+    expedited:/Expedited|Guaranteed Delivery|Exclusive Use/i.test(text),
+    notes:g(/(?:Special Instructions|Customer Notes|Notes)\s*:\s*(.+?)(?:\n|$)/i),
     pickup:g(/(?:Requested )?pickup:?\s*([\d/–-]+)/i)||'06/12/2026',delivery:g(/Delivery:\s*([\d/]+)/i)||'06/12/2026',
     firstDelivery:g(/1st Available Delivery:\s*([\d/]+)/i),
     inv:parseInventory(text)};
@@ -224,7 +381,27 @@ function inventoryHTML(inv){
   return chips+sp+`<div class="rooms">${rooms}</div>`;
 }
 
+/* ---------- extra services + customer notes (high-visibility) ---------- */
+function bulkyList(e){return e.inv?[...new Set(invSummary(e.inv).special)]:[];}
+function svcBadges(e){const b=[];
+  if(e.pgs)b.push('<span class="b pgs">★ PGS Premium Delivery</span>');
+  if(e.fullPack)b.push('<span class="b pack">📦 Full Packing</span>');
+  if(e.expedited)b.push('<span class="b exp">⏱ Expedited delivery</span>');
+  const n=bulkyList(e).length;if(n)b.push('<span class="b bulk">⚠ '+n+' bulky / special</span>');
+  return b;}
+function extrasHTML(e){
+  const b=svcBadges(e),bulky=bulkyList(e);let h='';
+  if(b.length)h+='<div class="svc">'+b.join('')+'</div>';
+  if(bulky.length)h+='<div class="callout bulk"><div class="ct">⚠ Bulky / special — bring gear, allow time</div><div class="ci">'+esc(bulky.join(' · '))+'</div></div>';
+  if(e.notes)h+='<div class="callout note"><div class="ct">📌 Customer notes / special instructions</div><div class="ci">'+esc(e.notes)+'</div></div>';
+  return h;}
+
 /* ---------- helpers ---------- */
+function pickupKey(j){
+  if(j.eta&&j.eta.date)return j.eta.date;
+  const m=(j.est&&j.est.pickup||'').match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  return m?m[3]+'-'+m[1]+'-'+m[2]:'9999-99-99';
+}
 function saveJob(job){const jobs=store.get();const i=jobs.findIndex(j=>j.id===job.id);const c=JSON.parse(JSON.stringify(job));if(i>=0)jobs[i]=c;else jobs.unshift(c);store.set(jobs);}
 function getJob(id){return store.get().find(j=>j.id===id);}
 function statusPill(s){if(s==='Awaiting pickup')s='Scheduled';const m={New:'p-grey',Assigned:'p-info',Scheduled:'p-ok'};return '<span class="pill '+(m[s]||'p-grey')+'">'+s+'</span>';}
@@ -245,12 +422,19 @@ function goForeman(){if(location.hash==='#foreman')router();else location.hash='
 /* ===== OFFICE ===== */
 function render(v){const a=$('#app');if(v==='dashboard')return a.innerHTML=vDashboard();if(v==='intake')return a.innerHTML=vIntake();if(v==='job')return a.innerHTML=vJob();}
 function newJob(){cur={id:'tmp'+Date.now(),est:null,foreman:null,eta:null,status:'New',created:now()};if(location.hash)location.hash='';render('intake');}
+function officeRow(j){return `<div class="jobrow" onclick="openJob('${j.id}')">
+    <div class="agtime"${j.eta?'':' style="color:#b9770e"'}>${j.eta?esc(j.eta.window):'needs ETA'}</div>
+    <div style="flex:1"><div class="id">${j.id} · ${esc(j.est?.customer)||'—'}</div>
+      <div class="meta">${esc((j.est?.oAddr||'').split(',')[1]||'')} → ${esc((j.est?.dAddr||'').split(',')[1]||'')} ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} ${j.foreman?'· '+esc(j.foreman.name):''}</div></div>
+    <div class="right">${statusPill(j.status)}</div></div>`;}
 function vDashboard(){
   const jobs=store.get();
-  const rows=jobs.length?jobs.map(j=>`<div class="jobrow" onclick="openJob('${j.id}')"><div><div class="id">${j.id} · ${esc(j.est?.customer)||'—'}</div>
-      <div class="meta">${esc((j.est?.oAddr||'').split(',')[1]||'')} → ${esc((j.est?.dAddr||'').split(',')[1]||'')} ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} ${j.foreman?'· '+esc(j.foreman.name):''} ${j.eta?'· '+esc(j.eta.whenLabel):''}</div></div>
-      <div class="right">${statusPill(j.status)}</div></div>`).join('')
-    :'<div class="empty">No jobs yet. Click <b>+ New job</b> to bring one in from a broker estimate.</div>';
+  const sched=jobs.filter(j=>j.eta&&j.eta.date).sort((a,b)=> a.eta.date===b.eta.date? fmWinOrder(a.eta.window)-fmWinOrder(b.eta.window):(a.eta.date<b.eta.date?-1:1));
+  const todo=jobs.filter(j=>!(j.eta&&j.eta.date)).sort((a,b)=> pickupKey(a)<pickupKey(b)?-1:(pickupKey(a)>pickupKey(b)?1:0));
+  let rows='';
+  if(todo.length)rows+='<div class="agday" style="color:#b9770e">⚠ Needs pickup window</div>'+todo.map(officeRow).join('');
+  let cd=null;sched.forEach(j=>{if(j.eta.date!==cd){cd=j.eta.date;rows+='<div class="agday">'+fmDateLabel(cd)+'</div>';}rows+=officeRow(j);});
+  if(!jobs.length)rows='<div class="empty">No jobs yet. Click <b>+ New job</b> to bring one in from a broker estimate.</div>';
   const c={New:0,Assigned:0,Scheduled:0};jobs.forEach(j=>{const st=j.status==='Awaiting pickup'?'Scheduled':j.status;c[st]=(c[st]||0)+1;});
   return `<div class="modebar">OFFICE · DISPATCH BOARD</div>
     <div class="card"><h2>Dispatch board</h2><p class="sub">Estimate in → assign a foreman → he confirms a 3-hour pickup window.</p>
@@ -259,11 +443,14 @@ function vDashboard(){
     <div class="joblist">${rows}</div></div>
     <div class="card"><p class="muted" style="margin:0">Prototype · steps 1–3 · runs in your browser, data saved locally on this device. Foreman accounts &amp; cross-device sync are simulated; the real version needs a backend.</p></div>`;
 }
-function vIntake(){return `<div class="modebar">OFFICE</div><div class="steps"><span class="s on">1. Intake (AI)</span><span class="s">2. Assign foreman</span><span class="s">3. Pickup window</span></div>
-    <div class="card"><h2>1 · Estimate intake</h2><p class="sub">The broker estimate is forwarded to the AI inbox. The agent reads it — including the full itemized inventory — and fills the job.</p>
-    <label class="fl">Forwarded estimate</label><textarea id="estText" rows="12">${SAMPLE_EMAIL}</textarea>
-    <div class="btnrow"><button class="ghost" onclick="document.getElementById('estText').value=\`${SAMPLE_EMAIL.replace(/`/g,'\\`')}\`">Reload sample</button>
+function vIntake(){const opts=SAMPLES.map((s,i)=>`<option value="${i}">${esc(s.label)}</option>`).join('');
+  return `<div class="modebar">OFFICE</div><div class="steps"><span class="s on">1. Intake (AI)</span><span class="s">2. Assign foreman</span><span class="s">3. Pickup window</span></div>
+    <div class="card"><h2>1 · Estimate intake</h2><p class="sub">The broker estimate is forwarded to the AI inbox. The agent reads it — including the full itemized inventory plus extra services and customer notes — and fills the job.</p>
+    <label class="fl">Test estimate</label><select id="sampleSel" onchange="loadSample()" style="margin-bottom:10px">${opts}</select>
+    <label class="fl">Forwarded estimate</label><textarea id="estText" rows="12">${esc(SAMPLES[0].text)}</textarea>
+    <div class="btnrow"><button class="ghost" onclick="loadSample()">↻ Reload sample</button>
     <button onclick="doExtract()">🤖 Run AI extraction →</button></div></div>`;}
+function loadSample(){const i=+($('#sampleSel')?.value||0);$('#estText').value=SAMPLES[i].text;}
 function doExtract(){const e=extract($('#estText').value);if(!e.job){alert('No job number found — paste a fuller estimate or use the sample.');return;}cur.est=e;cur.id=e.job;cur.status='New';saveJob(cur);render('job');}
 function vJob(){
   const j=cur,e=j.est,fm=foremenStore.get();
@@ -292,6 +479,7 @@ function vJob(){
     <div class="card"><div style="display:flex;align-items:center;gap:10px"><h2 style="margin:0">Job ${j.id}</h2>${statusPill(j.status)}<button class="ghost sm right" onclick="openJobSheet('${j.id}','office')">📄 Job sheet</button><button class="ghost sm" onclick="goOffice()">← Board</button></div>
     ${j.eta?`<div class="banner ok" style="margin-top:12px">✓ Pickup window confirmed: <span class="eta">${esc(j.eta.whenLabel)}</span>${j.eta.note?' — '+esc(j.eta.note):''}<small>by ${esc(j.foreman?j.foreman.name:'')} · ${j.eta.submittedAt}</small></div>`:''}
     <p class="sub" style="margin-top:6px">Read by the AI from the broker estimate${e.rep?' · broker rep '+esc(e.rep):''}.</p>
+    ${extrasHTML(e)}
     <div class="grid"><div class="f"><label class="fl">Customer</label><span class="v">${esc(e.customer)}</span></div>
       <div class="f"><label class="fl">Contact</label><span class="v">${esc(e.phone)||''} · ${esc(e.email)||''}</span></div>
       <div class="f"><label class="fl">Origin${e.oType?' · '+esc(e.oType):''}</label><span class="v">${esc(e.oAddr)}</span></div>
@@ -350,7 +538,7 @@ function renderFmJob(id,fromLink){
       <div class="vb"><span class="n">${e.inv?e.inv.totalPieces:'—'}</span><span class="l">Pieces</span></div>
       <div class="vb"><span class="n">${e.miles||'—'}</span><span class="l">Miles</span></div>
       <div class="vb"><span class="n">${esc(e.pickup||'—')}</span><span class="l">Move dates</span></div></div>
-    <div class="paybar">💵 Collect at pickup: <b>${money(payments(e).atPickup)}</b> <span class="sm2">— half of balance ${money(payments(e).bal)}; remaining ${money(payments(e).atDelivery)} due at delivery</span></div>
+    ${extrasHTML(e)}
     <div class="grid"><div class="f"><label class="fl">Customer</label><span class="v">${esc(e.customer)}</span></div>
       <div class="f"><label class="fl">Phone</label><span class="v">${esc(e.phone)||''}</span></div>
       <div class="f"><label class="fl">Pickup${e.oType?' · '+esc(e.oType):''}</label><span class="v">${esc(e.oAddr)}</span></div>
@@ -411,6 +599,7 @@ function renderJobSheet(id,mode){
        <div class="f"><label class="fl">Destination${e.dType?' · '+esc(e.dType):''}</label><span class="v">${esc(e.dAddr)}</span></div>
        <div class="f"><label class="fl">Move</label><span class="v">${e.miles?esc(e.miles)+' mi':''}${e.pickup?' · '+esc(e.pickup):''}</span></div>
        <div class="f"><label class="fl">Foreman</label><span class="v">${esc(j.foreman?j.foreman.name:'—')}</span></div></div>
+     ${extrasHTML(e)}
      <h3 class="sg" style="margin-top:14px">Charges</h3>
      <div class="kv"><span class="k">Transportation (${e.volume} cf @ $${e.rate})</span><span>${money(e.basic)}</span></div>
      <div class="kv"><span class="k">Total applicable charges · valuation</span><span>${money(e.total)} · ${esc(e.valuation)}</span></div>
