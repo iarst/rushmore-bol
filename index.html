@@ -437,6 +437,11 @@ function pickupKey(j){
   const m=(j.est&&j.est.pickup||'').match(/(\d{2})\/(\d{2})\/(\d{4})/);
   return m?m[3]+'-'+m[1]+'-'+m[2]:'9999-99-99';
 }
+function firstPickupKey(j){
+  const p=(j.est&&j.est.pickup)||'';
+  const md=p.match(/(\d{1,2})\/(\d{1,2})/),yr=p.match(/(\d{4})/);
+  return (md&&yr)?yr[1]+'-'+('0'+md[1]).slice(-2)+'-'+('0'+md[2]).slice(-2):'9999-99-99';
+}
 function saveJob(job){const jobs=store.get();const i=jobs.findIndex(j=>j.id===job.id);const c=JSON.parse(JSON.stringify(job));if(i>=0)jobs[i]=c;else jobs.unshift(c);store.set(jobs);}
 function getJob(id){return store.get().find(j=>j.id===id);}
 function statusPill(s){if(s==='Awaiting pickup')s='Scheduled';const m={New:'p-grey',Assigned:'p-info',Scheduled:'p-ok'};return '<span class="pill '+(m[s]||'p-grey')+'">'+s+'</span>';}
@@ -463,12 +468,9 @@ function officeRow(j){return `<div class="jobrow" onclick="openJob('${j.id}')">
       <div class="meta">${esc((j.est?.oAddr||'').split(',')[1]||'')} → ${esc((j.est?.dAddr||'').split(',')[1]||'')} ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} ${j.foreman?'· '+esc(j.foreman.name):''}${j.bol&&j.bol.signed?' · <b style="color:#1D9E75">BOL ✓</b>':''}</div></div>
     <div class="right">${statusPill(j.status)}</div></div>`;}
 function vDashboard(){
-  const jobs=store.get();
-  const sched=jobs.filter(j=>j.eta&&j.eta.date).sort((a,b)=> a.eta.date===b.eta.date? fmWinOrder(a.eta.window)-fmWinOrder(b.eta.window):(a.eta.date<b.eta.date?-1:1));
-  const todo=jobs.filter(j=>!(j.eta&&j.eta.date)).sort((a,b)=> pickupKey(a)<pickupKey(b)?-1:(pickupKey(a)>pickupKey(b)?1:0));
-  let rows='';
-  if(todo.length)rows+='<div class="agday" style="color:#b9770e">⚠ Needs pickup window</div>'+todo.map(officeRow).join('');
-  let cd=null;sched.forEach(j=>{if(j.eta.date!==cd){cd=j.eta.date;rows+='<div class="agday">'+fmDateLabel(cd)+'</div>';}rows+=officeRow(j);});
+  const jobs=store.get().slice().sort((a,b)=>{const ka=firstPickupKey(a),kb=firstPickupKey(b);return ka!==kb?(ka<kb?-1:1):(fmWinOrder(a.eta&&a.eta.window)-fmWinOrder(b.eta&&b.eta.window));});
+  let rows='',cd=null;
+  jobs.forEach(j=>{const k=firstPickupKey(j);if(k!==cd){cd=k;rows+='<div class="agday">'+(k==='9999-99-99'?'Pickup date TBD':fmDateLabel(k))+'</div>';}rows+=officeRow(j);});
   if(!jobs.length)rows='<div class="empty">No jobs yet. Click <b>+ New job</b> to bring one in from a broker estimate.</div>';
   const c={New:0,Assigned:0,Scheduled:0};jobs.forEach(j=>{const st=j.status==='Awaiting pickup'?'Scheduled':j.status;c[st]=(c[st]||0)+1;});
   return `<div class="modebar">OFFICE · DISPATCH BOARD</div>
