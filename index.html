@@ -56,6 +56,13 @@
   .jobrow.newrow{border-color:#f0c781;margin-bottom:8px}
   .jobrow.newrow:hover{border-color:#E0922F;background:#fffaf0}
   .p-new{background:#E0922F;color:#fff;font-weight:800;letter-spacing:.6px}
+  #pinGate{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:99999}
+  #pinGate .pinbox{background:#fff;padding:30px 28px;border-radius:14px;width:300px;max-width:88vw;text-align:center;box-shadow:0 14px 44px rgba(0,0,0,.35)}
+  #pinGate .pinlogo{font-weight:800;font-size:18px;color:var(--navy)}
+  #pinGate .pinsub{color:var(--muted);font-size:13px;margin:6px 0 16px}
+  #pinGate input{width:100%;padding:11px;font-size:18px;text-align:center;letter-spacing:5px;border:1.5px solid var(--line);border-radius:9px;box-sizing:border-box}
+  #pinGate button{width:100%;margin-top:12px;padding:11px;background:var(--blue);color:#fff;border:0;border-radius:9px;font-weight:700;font-size:15px;cursor:pointer}
+  #pinGate .pinerr{color:#c0392b;font-size:12px;margin-top:10px;min-height:14px}
   .paybar{background:#e7f6ef;border:1px solid #bfe6d4;border-radius:10px;padding:11px 15px;margin:0 0 14px;font-size:15px;color:#0f6e56} .paybar b{font-size:18px} .paybar .sm2{font-size:12px;color:#3a7a63}
   /* extra services + customer notes */
   .svc{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 2px}
@@ -534,14 +541,13 @@ async function checkInbox(btn){
     render('dashboard');
   }catch(e){btn.textContent=o;btn.disabled=false;alert('Inbox check failed: '+e.message+'\n(The backend may be waking up, or the Gmail credentials are not set yet.)');}
 }
-function vIntake(){const opts=SAMPLES.map((s,i)=>`<option value="${i}">${esc(s.label)}</option>`).join('');
-  return `<div class="modebar">OFFICE</div><div class="steps"><span class="s on">1. Intake (AI)</span><span class="s">2. Assign foreman</span><span class="s">3. Pickup window</span></div>
-    <div class="card"><h2>1 · Estimate intake</h2><p class="sub">The broker estimate is forwarded to the AI inbox. The agent reads it — including the full itemized inventory plus extra services and customer notes — and fills the job.</p>
-    <label class="fl">Test estimate</label><select id="sampleSel" onchange="loadSample()" style="margin-bottom:10px">${opts}</select>
-    <label class="fl">Forwarded estimate</label><textarea id="estText" rows="12">${esc(SAMPLES[0].text)}</textarea>
-    <div class="btnrow"><button class="ghost" onclick="loadSample()">↻ Reload sample</button>
-    <button onclick="doExtract()">🤖 Run AI extraction →</button></div></div>`;}
-function loadSample(){const i=+($('#sampleSel')?.value||0);$('#estText').value=SAMPLES[i].text;}
+function vIntake(){
+  return `<div class="modebar">OFFICE</div><div class="steps"><span class="s on">1. Intake</span><span class="s">2. Assign foreman</span><span class="s">3. Pickup window</span></div>
+    <div class="card"><h2>1 · Estimate intake</h2><p class="sub">Signed broker estimates forwarded to <b>estimates@rushmorevanlines.com</b> are read automatically — including the full itemized inventory, extra services and customer notes — and land on the dispatch board. Use <b>📥 Check inbox</b> on the board to pull them in.</p>
+    <p class="sub">Need to enter one by hand? Paste the estimate text below.</p>
+    <label class="fl">Paste estimate text (optional)</label><textarea id="estText" rows="10" placeholder="Paste a broker estimate here only if entering manually…"></textarea>
+    <div class="btnrow"><button class="ghost" onclick="goOffice()">← Back to board</button>
+    <button onclick="doExtract()">Create job from pasted text →</button></div></div>`;}
 function doExtract(){const e=extract($('#estText').value);if(!e.job){alert('No job number found — paste a fuller estimate or use the sample.');return;}cur.est=e;cur.id=e.job;cur.status='New';saveJob(cur);render('job');}
 function vJob(){
   const j=cur,e=j.est,fm=foremenStore.get();
@@ -1018,7 +1024,24 @@ function renderBOLDoc(id){const j=getJob(id);if(!j||!j.bol){goForeman();return;}
   window.scrollTo(0,0);
 }
 
-router();
+/* ---- PIN gate + app init ---- */
+function initApp(){
+  try{const all=store.get();const clean=all.filter(j=>j.id!=='90000001');if(clean.length!==all.length)store.set(clean);}catch(e){}
+  router();
+  setTimeout(autoPoll,4000);
+  setInterval(autoPoll,5*60*1000);
+}
+function gate(){
+  if(localStorage.getItem('rvl_pin')==='2026'){initApp();return;}
+  const ov=document.createElement('div');ov.id='pinGate';
+  ov.innerHTML='<div class="pinbox"><div class="pinlogo">Rushmore Van Lines</div><div class="pinsub">Enter access PIN to continue</div><input id="pinIn" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="PIN"><button id="pinBtn">Enter</button><div id="pinErr" class="pinerr"></div></div>';
+  document.body.appendChild(ov);
+  const inp=ov.querySelector('#pinIn'),btn=ov.querySelector('#pinBtn'),err=ov.querySelector('#pinErr');
+  function tryPin(){if(inp.value.trim()==='2026'){localStorage.setItem('rvl_pin','2026');ov.remove();initApp();}else{err.textContent='Incorrect PIN — try again';inp.value='';inp.focus();}}
+  btn.onclick=tryPin;inp.addEventListener('keydown',e=>{if(e.key==='Enter')tryPin();});
+  setTimeout(()=>inp.focus(),60);
+}
+gate();
 
 /* ---- auto-poll the inbox every 5 min on the office board ---- */
 function isOfficeView(){const h=location.hash||'';return !(h.indexOf('#j=')===0||h.indexOf('#fm=')===0||h.indexOf('#foreman')===0);}
@@ -1031,8 +1054,6 @@ async function autoPoll(){
     if(added&&!location.hash)render('dashboard');
   }catch(e){}
 }
-setTimeout(autoPoll,4000);
-setInterval(autoPoll,5*60*1000);
 </script>
 </body>
 </html>
