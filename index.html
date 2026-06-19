@@ -526,7 +526,7 @@ function vDashboard(){
     <button class="ghost" onclick="checkInbox(this)">📥 Check inbox</button>
     <span class="right" style="align-self:center"><span class="pill p-grey">${c.New||0} new</span> <span class="pill p-info">${c.Assigned||0} assigned</span> <span class="pill p-ok">${c.Scheduled||0} scheduled</span></span></div>
     <div class="joblist">${rows}</div></div>
-    <div class="card"><p class="muted" style="margin:0">Prototype · steps 1–3 · runs in your browser, data saved locally on this device. Foreman accounts &amp; cross-device sync are simulated; the real version needs a backend.</p></div>`;
+    <div class="card"><p class="muted" style="margin:0">Pilot build · Estimates auto-import from <b>estimates@</b> and the official BOL is generated on the backend. The dispatch board is still saved in this browser (per device) — shared cross-device sync and per-user logins arrive with the production database.</p></div>`;
 }
 function importJobs(list){let n=0;(list||[]).forEach(j=>{if(!j||!j.id)return;const ex=getJob(j.id);
   if(!ex){saveJob(j);n++;}
