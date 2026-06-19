@@ -1016,6 +1016,20 @@ function renderBOLDoc(id){const j=getJob(id);if(!j||!j.bol){goForeman();return;}
 }
 
 router();
+
+/* ---- auto-poll the inbox every 5 min on the office board ---- */
+function isOfficeView(){const h=location.hash||'';return !(h.indexOf('#j=')===0||h.indexOf('#fm=')===0||h.indexOf('#foreman')===0);}
+async function autoPoll(){
+  if(!isOfficeView())return;
+  try{
+    const r=await fetch(BACKEND+'/ingest/poll',{method:'POST'});
+    const d=await r.json();if(!d.ok)return;
+    let added=0;(d.jobs||[]).forEach(j=>{if(j&&j.id&&!getJob(j.id)){saveJob(j);added++;}});
+    if(added&&!location.hash)render('dashboard');
+  }catch(e){}
+}
+setTimeout(autoPoll,4000);
+setInterval(autoPoll,5*60*1000);
 </script>
 </body>
 </html>
