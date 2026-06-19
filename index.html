@@ -446,11 +446,33 @@ function saveJob(job){const jobs=store.get();const i=jobs.findIndex(j=>j.id===jo
 function getJob(id){return store.get().find(j=>j.id===id);}
 function statusPill(s){if(s==='Awaiting pickup')s='Scheduled';const m={New:'p-grey',Assigned:'p-info',Scheduled:'p-ok'};return '<span class="pill '+(m[s]||'p-grey')+'">'+s+'</span>';}
 function foremanLink(j){return location.origin+location.pathname+'#fm='+enc(j);}
+function shortLink(id){return location.origin+location.pathname+'#j='+id;}
+let CURLINK='';
+function linkSnapshot(j){const s=JSON.parse(JSON.stringify(j));delete s.linkId;return s;}
+async function hydrateForemanLink(j){
+  const box=document.getElementById('fmLinkBox');if(!box)return;
+  try{
+    let id=j.linkId;
+    if(!id){
+      const r=await fetch(BACKEND+'/job',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(linkSnapshot(j))});
+      if(!r.ok)throw 0;const d=await r.json();id=d.id;if(!id)throw 0;
+      j.linkId=id;const st=getJob(j.id);if(st){st.linkId=id;saveJob(st);}if(cur&&cur.id===j.id)cur.linkId=id;
+    }
+    CURLINK=shortLink(id);box.textContent=CURLINK;box.classList.remove('muted');
+    const m=document.getElementById('fmMail');if(m)m.disabled=false;
+  }catch(e){
+    CURLINK=foremanLink(j);box.textContent=CURLINK;box.classList.remove('muted');
+    const m=document.getElementById('fmMail');if(m)m.disabled=false;
+  }
+}
+function emailLink(){const j=cur;const link=CURLINK||foremanLink(j);location.href='mailto:'+encodeURIComponent(j.foreman.email)+'?subject='+encodeURIComponent('Pickup assigned — Job '+j.id)+'&body='+encodeURIComponent('You have been assigned a pickup. Open your job and confirm a pickup window:\n\n'+link);}
+function openAsForeman(){if(cur&&cur.linkId)location.hash='j='+cur.linkId;else location.hash='fm='+enc(cur);}
 
 /* ---------- router & nav ---------- */
 function navHTML(mode){return `<button class="${mode==='office'?'act':''}" onclick="goOffice()">Dispatch (office)</button><button class="${mode==='foreman'?'act':''}" onclick="goForeman()">Foreman portal</button>`;}
 function router(){
   const h=location.hash||'';
+  if(h.indexOf('#j=')===0){const id=h.slice(3);$('#nav').innerHTML=navHTML('foreman');$('#app').innerHTML='<div class="card">Loading job…</div>';fetch(BACKEND+'/job/'+encodeURIComponent(id)).then(r=>{if(!r.ok)throw 0;return r.json();}).then(job=>{job.linkId=id;saveJob(job);if(job.foreman&&job.foreman.email)setFm(job.foreman.email);renderFmJob(job.id,true);}).catch(()=>{$('#app').innerHTML='<div class="card">This link could not be opened — it may have expired. Ask the office to resend.</div>';});return;}
   if(h.indexOf('#fm=')===0){try{const job=dec(h.slice(4));if(!getJob(job.id))saveJob(job);if(job.foreman&&job.foreman.email)setFm(job.foreman.email);$('#nav').innerHTML=navHTML('foreman');renderFmJob(job.id,true);}catch(e){$('#app').innerHTML='<div class="card">Invalid link.</div>';}return;}
   if(h.indexOf('#foreman')===0){$('#nav').innerHTML=navHTML('foreman');renderForemanPortal();return;}
   $('#nav').innerHTML=navHTML('office')+' <button onclick="newJob()">+ New job</button>';render('dashboard');
@@ -502,15 +524,14 @@ function vJob(){
           <div class="f"><label class="fl">Email</label><input id="nfe" placeholder="name@email.com"></div></div>
         <button class="ghost sm" onclick="addForeman()">Save foreman</button></details></div>`;
   }else{
-    const link=foremanLink(j);
-    const mailto='mailto:'+encodeURIComponent(j.foreman.email)+'?subject='+encodeURIComponent('Pickup assigned — Job '+j.id)+'&body='+encodeURIComponent('You have been assigned a pickup. Open your job and confirm a pickup window:\n\n'+link);
     assignBlock=`<div class="card sub2"><h3 class="sg">Assigned foreman</h3>
       <div class="fmcard"><div class="av">${initials(j.foreman.name)}</div><div><div style="font-weight:700">${esc(j.foreman.name)}</div><div class="muted">${esc(j.foreman.email)} · assigned ${j.assignedAt||''}</div></div>
-        <div class="right"><button class="ghost sm" onclick="cur.foreman=null;cur.status='New';saveJob(cur);render('job')">Reassign</button></div></div>
-      <h3 class="sg" style="margin-top:16px">Foreman link <span class="muted">(email it to ${esc(j.foreman.name.split(' ')[0])})</span></h3><div class="linkbox">${link}</div>
-      <div class="btnrow"><button class="sm" onclick="copyLink()">📋 Copy link</button><a href="${mailto}"><button class="sm ghost" type="button">✉️ Email link</button></a>
-        <button class="ghost sm" onclick="location.hash='fm='+enc(cur)">Open as foreman →</button></div>
+        <div class="right"><button class="ghost sm" onclick="cur.foreman=null;cur.status='New';cur.linkId=null;saveJob(cur);render('job')">Reassign</button></div></div>
+      <h3 class="sg" style="margin-top:16px">Foreman link <span class="muted">(email it to ${esc(j.foreman.name.split(' ')[0])})</span></h3><div class="linkbox muted" id="fmLinkBox">Generating short link…</div>
+      <div class="btnrow"><button class="sm" onclick="copyLink()">📋 Copy link</button><button class="sm ghost" id="fmMail" type="button" disabled onclick="emailLink()">✉️ Email link</button>
+        <button class="ghost sm" onclick="openAsForeman()">Open as foreman →</button></div>
       ${j.eta?'':`<div class="banner info" style="margin-top:14px">Waiting for ${esc(j.foreman.name.split(' ')[0])} to sign in and confirm a 3-hour pickup window…</div>`}</div>`;
+    setTimeout(()=>hydrateForemanLink(j),0);
   }
   return `<div class="modebar">OFFICE</div><div class="steps"><span class="s done">1. Intake</span><span class="s ${j.foreman?'done':'on'}">2. Assign foreman</span><span class="s ${j.eta?'done':(j.foreman?'on':'')}">3. Pickup window</span></div>
     <div class="card"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">Job ${j.id}</h2>${statusPill(j.status)}${j.bol&&j.bol.signed?`<button class="sm right" onclick="generateOfficialBOL('${j.id}')">📄 Official BOL</button><button class="ghost sm" onclick="openBOLDoc('${j.id}')">Summary</button><button class="ghost sm" onclick="openJobSheet('${j.id}','office')">Job sheet</button>`:`<button class="ghost sm right" onclick="openJobSheet('${j.id}','office')">📄 Job sheet</button>`}<button class="ghost sm" onclick="goOffice()">← Board</button></div>
@@ -533,7 +554,7 @@ function vJob(){
 }
 function assignForeman(){const fm=foremenStore.get();const i=+$('#fmSel').value;cur.foreman=fm[i];cur.assignedAt=now();cur.status='Assigned';saveJob(cur);render('job');}
 function addForeman(){const n=$('#nfn').value.trim(),em=$('#nfe').value.trim();if(!n){alert('Enter a name.');return;}const fm=foremenStore.get();fm.push({name:n,email:em});foremenStore.set(fm);render('job');}
-function copyLink(){const t=foremanLink(cur);(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{const b=event.target;b.textContent='✓ Copied';setTimeout(()=>b.textContent='📋 Copy link',1500);}).catch(()=>prompt('Copy this link:',t));}
+function copyLink(){const t=CURLINK||foremanLink(cur);(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{const b=event.target;b.textContent='✓ Copied';setTimeout(()=>b.textContent='📋 Copy link',1500);}).catch(()=>prompt('Copy this link:',t));}
 function openJob(id){cur=getJob(id);if(cur)render('job');}
 
 /* ===== FOREMAN PORTAL ===== */
