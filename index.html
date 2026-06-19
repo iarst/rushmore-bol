@@ -457,15 +457,15 @@ function firstPickupKey(j){
 }
 function saveJob(job){const jobs=store.get();const i=jobs.findIndex(j=>j.id===job.id);const c=JSON.parse(JSON.stringify(job));if(i>=0)jobs[i]=c;else jobs.unshift(c);store.set(jobs);
   try{fetch(BACKEND+'/board/job',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)}).catch(()=>{});}catch(e){}}
-async function syncBoard(){try{
-  const r=await fetch(BACKEND+'/board');const d=await r.json();
-  if(!d||!d.ok||!Array.isArray(d.jobs))return;
-  const remote=d.jobs,rids=new Set(remote.map(j=>String(j.id)));
+function mergeRemote(remote){
+  if(!Array.isArray(remote))return;
+  const rids=new Set(remote.map(j=>String(j.id)));
   // promote jobs that only exist on this device (first-run migration / offline edits) up to the shared board
   const localOnly=store.get().filter(j=>j&&j.id&&!rids.has(String(j.id)));
   localOnly.forEach(j=>{try{fetch(BACKEND+'/board/job',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(j)}).catch(()=>{});}catch(e){}});
   store.set(remote.concat(localOnly));
-}catch(e){}}
+}
+async function syncBoard(){try{const r=await fetch(BACKEND+'/board');const d=await r.json();if(d&&d.ok)mergeRemote(d.jobs);}catch(e){}}
 function getJob(id){return store.get().find(j=>j.id===id);}
 function statusPill(s){if(s==='Awaiting pickup')s='Scheduled';const m={New:'p-grey',Assigned:'p-info',Scheduled:'p-ok'};return '<span class="pill '+(m[s]||'p-grey')+'">'+s+'</span>';}
 function foremanLink(j){return location.origin+location.pathname+'#fm='+enc(j);}
@@ -533,7 +533,7 @@ function vDashboard(){
   return `<div class="modebar">OFFICE · DISPATCH BOARD</div>
     <div class="card"><h2>Dispatch board</h2><p class="sub">Estimate in → assign a foreman → he confirms a 3-hour pickup window.</p>
     <div class="btnrow" style="margin:0 0 14px"><button onclick="newJob()">+ New job from estimate</button>
-    <button class="ghost" onclick="checkInbox(this)">📥 Check inbox</button>
+    <button class="ghost" onclick="checkInbox(this)">🔄 Refresh</button>
     <span class="right" style="align-self:center"><span class="pill p-grey">${c.New||0} new</span> <span class="pill p-info">${c.Assigned||0} assigned</span> <span class="pill p-ok">${c.Scheduled||0} scheduled</span></span></div>
     <div class="joblist">${rows}</div></div>
     <div class="card"><p class="muted" style="margin:0">Pilot build · Estimates auto-import from <b>estimates@</b> and the official BOL is generated on the backend. The dispatch board is still saved in this browser (per device) — shared cross-device sync and per-user logins arrive with the production database.</p></div>`;
@@ -542,20 +542,20 @@ function importJobs(list){let n=0;(list||[]).forEach(j=>{if(!j||!j.id)return;con
   if(!ex){saveJob(j);n++;}
   else if(!ex.foreman&&j.est&&j.est.inv&&!(ex.est&&ex.est.inv)){ex.est=j.est;saveJob(ex);n++;}});return n;}
 async function checkInbox(btn){
-  const o=btn.textContent;btn.textContent='⏳ Checking…';btn.disabled=true;
+  const o=btn.textContent;btn.textContent='⏳ Refreshing…';btn.disabled=true;
   try{
     const r=await fetch(BACKEND+'/ingest/poll',{method:'POST'});
     const d=await r.json();
     if(!d.ok)throw new Error(d.error||'failed');
-    if(Array.isArray(d.jobs))store.set(d.jobs);
+    mergeRemote(d.jobs);
     btn.textContent=o;btn.disabled=false;
-    alert(d.new?('Imported '+d.new+' new estimate'+(d.new>1?'s':'')+' from estimates@.'):'No new estimates in the inbox.');
+    if(d.new)alert('Pulled in '+d.new+' new estimate'+(d.new>1?'s':'')+' from estimates@.');
     render('dashboard');
-  }catch(e){btn.textContent=o;btn.disabled=false;alert('Inbox check failed: '+e.message+'\n(The backend may be waking up, or the Gmail credentials are not set yet.)');}
+  }catch(e){btn.textContent=o;btn.disabled=false;alert('Refresh failed: '+e.message+'\n(The backend may be waking up — wait ~40s and try again.)');}
 }
 function vIntake(){
   return `<div class="modebar">OFFICE</div><div class="steps"><span class="s on">1. Intake</span><span class="s">2. Assign foreman</span><span class="s">3. Pickup window</span></div>
-    <div class="card"><h2>1 · Estimate intake</h2><p class="sub">Signed broker estimates forwarded to <b>estimates@rushmorevanlines.com</b> are read automatically — including the full itemized inventory, extra services and customer notes — and land on the dispatch board. Use <b>📥 Check inbox</b> on the board to pull them in.</p>
+    <div class="card"><h2>1 · Estimate intake</h2><p class="sub">Signed broker estimates forwarded to <b>estimates@rushmorevanlines.com</b> are read automatically — including the full itemized inventory, extra services and customer notes — and land on the dispatch board. Use <b>🔄 Refresh</b> on the board to pull them in right away.</p>
     <p class="sub">Need to enter one by hand? Paste the estimate text below.</p>
     <label class="fl">Paste estimate text (optional)</label><textarea id="estText" rows="10" placeholder="Paste a broker estimate here only if entering manually…"></textarea>
     <div class="btnrow"><button class="ghost" onclick="goOffice()">← Back to board</button>
@@ -980,11 +980,14 @@ function backendPayload(job){const e=job.est||{},b=job.bol||{};const oc=parseCSZ
       pickup_cust:sg('pickup','cust'),pickup_carrier:sg('pickup','carrier'),accessorial_cust:sg('accessorial','cust'),accessorial_carrier:sg('accessorial','carrier'),
       ldf:sg('ldf','cust'),pms_cust:sg('pms','cust'),pms_carrier:sg('pms','carrier')}};}
 function generateOfficialBOL(id){const job=getJob(id);if(!job||!job.bol){alert('Sign the Bill of Lading first.');return;}
+  // open the new window NOW, inside the click, so the popup blocker allows it; fill it once the PDF is ready
+  const w=window.open('','_blank');
+  if(w)w.document.write('<title>Bill of Lading</title><p style="font-family:sans-serif;padding:24px;color:#444">Generating your Bill of Lading…</p>');
   const btn=window.event&&window.event.target,orig=btn?btn.textContent:'';if(btn){btn.disabled=true;btn.textContent='Generating your BOL…';}
   fetch(BACKEND+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(backendPayload(job))})
     .then(r=>{if(!r.ok)throw new Error('server '+r.status);return r.blob();})
-    .then(blob=>{const u=URL.createObjectURL(blob);window.open(u,'_blank');})
-    .catch(err=>alert('Could not reach the BOL service ('+err.message+'). The free server may be waking up — wait ~40s and try again.'))
+    .then(blob=>{const u=URL.createObjectURL(blob);if(w)w.location.href=u;else window.open(u,'_blank');})
+    .catch(err=>{if(w)w.close();alert('Could not reach the BOL service ('+err.message+'). The free server may be waking up — wait ~40s and try again.');})
     .finally(()=>{if(btn){btn.disabled=false;btn.textContent=orig;}});}
 function openBOLDoc(id){renderBOLDoc(id);}
 function bolMoney(x){return money(num(x)||0);}
