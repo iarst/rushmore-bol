@@ -511,7 +511,7 @@ function vJob(){
       ${j.eta?'':`<div class="banner info" style="margin-top:14px">Waiting for ${esc(j.foreman.name.split(' ')[0])} to sign in and confirm a 3-hour pickup window…</div>`}</div>`;
   }
   return `<div class="modebar">OFFICE</div><div class="steps"><span class="s done">1. Intake</span><span class="s ${j.foreman?'done':'on'}">2. Assign foreman</span><span class="s ${j.eta?'done':(j.foreman?'on':'')}">3. Pickup window</span></div>
-    <div class="card"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">Job ${j.id}</h2>${statusPill(j.status)}${j.bol&&j.bol.signed?`<button class="sm right" onclick="openBOLDoc('${j.id}')">📄 Signed BOL</button><button class="ghost sm" onclick="openJobSheet('${j.id}','office')">Job sheet</button>`:`<button class="ghost sm right" onclick="openJobSheet('${j.id}','office')">📄 Job sheet</button>`}<button class="ghost sm" onclick="goOffice()">← Board</button></div>
+    <div class="card"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">Job ${j.id}</h2>${statusPill(j.status)}${j.bol&&j.bol.signed?`<button class="sm right" onclick="generateOfficialBOL('${j.id}')">📄 Official BOL</button><button class="ghost sm" onclick="openBOLDoc('${j.id}')">Summary</button><button class="ghost sm" onclick="openJobSheet('${j.id}','office')">Job sheet</button>`:`<button class="ghost sm right" onclick="openJobSheet('${j.id}','office')">📄 Job sheet</button>`}<button class="ghost sm" onclick="goOffice()">← Board</button></div>
     ${j.eta?`<div class="banner ok" style="margin-top:12px">✓ Pickup window confirmed: <span class="eta">${esc(j.eta.whenLabel)}</span>${j.eta.note?' — '+esc(j.eta.note):''}<small>by ${esc(j.foreman?j.foreman.name:'')} · ${j.eta.submittedAt}</small></div>`:''}
     <p class="sub" style="margin-top:6px">Read by the AI from the broker estimate${e.rep?' · broker rep '+esc(e.rep):''}.</p>
     ${extrasHTML(e)}
@@ -568,7 +568,7 @@ function renderFmJob(id,fromLink){
    <div class="card fmwrap"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="pill p-info">FOREMAN</span><h2 style="margin:0">Pickup — Job ${job.id}</h2>
      <button class="ghost sm right" onclick="openJobSheet('${job.id}','foreman')">📄 Job sheet</button><button class="ghost sm" onclick="goForeman()">My jobs</button></div>
     ${done?`<div class="banner ok" style="margin-top:12px">✓ Pickup window confirmed: <span class="eta">${esc(job.eta.whenLabel)}</span>${job.eta.note?' — '+esc(job.eta.note):''}<small>confirmed ${job.eta.submittedAt}</small></div>`:''}
-    ${job.bol&&job.bol.signed?`<div class="banner ok" style="margin-top:12px">✅ Bill of Lading signed by ${esc(e.customer)} &amp; ${esc(job.foreman?job.foreman.name:'foreman')}<small>${job.bol.signedAt} · <a href="javascript:void(0)" onclick="openBOLDoc('${job.id}')"><b>📄 view / print BOL</b></a> · <a href="javascript:void(0)" onclick="openBOL('${job.id}')">edit</a></small></div>`:`<div class="banner info" style="margin-top:12px">📝 On site? <a href="javascript:void(0)" onclick="openBOL('${job.id}')"><b>Fill &amp; sign the Bill of Lading →</b></a></div>`}
+    ${job.bol&&job.bol.signed?`<div class="banner ok" style="margin-top:12px">✅ Bill of Lading signed by ${esc(e.customer)} &amp; ${esc(job.foreman?job.foreman.name:'foreman')}<small>${job.bol.signedAt} · <a href="javascript:void(0)" onclick="generateOfficialBOL('${job.id}')"><b>📄 official BOL (PDF)</b></a> · <a href="javascript:void(0)" onclick="openBOLDoc('${job.id}')">summary</a> · <a href="javascript:void(0)" onclick="openBOL('${job.id}')">edit</a></small></div>`:`<div class="banner info" style="margin-top:12px">📝 On site? <a href="javascript:void(0)" onclick="openBOL('${job.id}')"><b>Fill &amp; sign the Bill of Lading →</b></a></div>`}
     <p class="sub" style="margin-top:6px">Assigned to ${esc(job.foreman?job.foreman.name:'you')}. Review the job &amp; inventory${done?'.':', then confirm your 3-hour pickup window.'}</p>
     <div class="volbar"><div class="vb"><span class="n">${e.volume} cf</span><span class="l">Volume</span></div>
       <div class="vb"><span class="n">${e.inv?e.inv.totalPieces:'—'}</span><span class="l">Pieces</span></div>
@@ -883,10 +883,31 @@ function renderBOLDone(id){const job=getJob(id);const e=job.est||{},b=job.bol||{
        <div class="f"><label class="fl">Exceptions</label><span class="v">${esc(b.exceptions||'none noted')}</span></div></div>
      <h3 class="sg" style="margin-top:14px">Signatures collected</h3>
      ${SIGPTS.map(pt=>{const a=(b.sigs||{})[pt.key]||{};const signed=pt.who.filter(w=>a[w]).map(w=>w==='cust'?'Customer':'Foreman');return `<div class="note"><b>${esc(pt.label)}:</b> ${signed.length?signed.join(' + ')+' ✓':'<span style=\"color:#b9770e\">pending (delivery)</span>'}</div>`;}).join('')}
-     <div class="ackbox" style="margin-top:14px">📄 View the completed Bill of Lading below — print it or save as PDF. (In Phase 3 the backend emails this to the customer + stores it automatically.)</div>
-     <div class="btnrow"><button onclick="openBOLDoc('${job.id}')">📄 View / print Bill of Lading</button><button class="ghost" onclick="openBOL('${job.id}')">Re-open / edit</button><button class="ghost" onclick="openFmJob('${job.id}')">Back to job</button></div></div>`;
+     <div class="ackbox" style="margin-top:14px">📄 Generate the official Bill of Lading — your real CSI forms (BOL + Terms + AS-22 + LDF-08 + PMS-19), filled and signed, as a PDF to print or email.</div>
+     <div class="btnrow"><button onclick="generateOfficialBOL('${job.id}')">📄 Official BOL (PDF)</button><button class="ghost sm" onclick="openBOLDoc('${job.id}')">Quick summary</button><button class="ghost sm" onclick="openBOL('${job.id}')">Edit</button><button class="ghost sm" onclick="openFmJob('${job.id}')">Back</button></div></div>`;
   window.scrollTo(0,0);
 }
+const BACKEND='https://rushmore-bol-backend.onrender.com';
+function parseCSZ(s){s=String(s||'');const i=s.lastIndexOf(',');const city=i>=0?s.slice(0,i).trim():s.trim();const rest=(i>=0?s.slice(i+1):'').trim().split(/\s+/);return {city:city,state:rest[0]||'',zip:rest[1]||''};}
+function backendPayload(job){const e=job.est||{},b=job.bol||{};const oc=parseCSZ(b.oCSZ),dc=parseCSZ(b.dCSZ);
+  const sg=(k,w)=>{const a=(b.sigs||{})[k];return a&&a[w]?a[w].img:'';};
+  return {van:b.vanNo,order:b.order||job.id,agreedPickup:b.agreedPickup,actualPickup:b.actualPickup,firstAvail:b.firstAvail,deliverNoLater:b.deliverNoLater,
+    oName:b.oName,oStreet:b.oStreet,oCity:oc.city,oState:oc.state,oZip:oc.zip,oPhone:b.oPhone,
+    dName:b.dName,dStreet:b.dStreet,dCity:dc.city,dState:dc.state,dZip:dc.zip,dPhone:b.dPhone,
+    enrouteName:b.enrouteName,enroutePhone:b.enroutePhone,valuation:b.valuation,
+    chTransport:b.chTransport,chFuel:b.chFuel,chBulky:b.chBulky,chStairs:b.chStairs,locStairs:b.locStairs,
+    chTotal:b.chTotal,payDiscount:b.payDiscount,payDeposit:b.payDeposit,payOrigin:b.payOrigin,payBalanceDest:b.payBalanceDest,payPriceAdj:b.payPriceAdj,payDestination:b.payDestination,payBalance30:b.payBalance30,
+    ttAccess:b.ttAccess,storage:b.storage,dwellingO:b.dwellingO,volume:e.volume,packTotal:b.packTotal,
+    sigs:{valuation:sg('valuation','cust'),documents:sg('documents','cust'),bolReceipt_cust:sg('bolReceipt','cust'),bolReceipt_carrier:sg('bolReceipt','carrier'),
+      pickup_cust:sg('pickup','cust'),pickup_carrier:sg('pickup','carrier'),accessorial_cust:sg('accessorial','cust'),accessorial_carrier:sg('accessorial','carrier'),
+      ldf:sg('ldf','cust'),pms_cust:sg('pms','cust'),pms_carrier:sg('pms','carrier')}};}
+function generateOfficialBOL(id){const job=getJob(id);if(!job||!job.bol){alert('Sign the Bill of Lading first.');return;}
+  const btn=window.event&&window.event.target,orig=btn?btn.textContent:'';if(btn){btn.disabled=true;btn.textContent='Generating your BOL…';}
+  fetch(BACKEND+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(backendPayload(job))})
+    .then(r=>{if(!r.ok)throw new Error('server '+r.status);return r.blob();})
+    .then(blob=>{const u=URL.createObjectURL(blob);window.open(u,'_blank');})
+    .catch(err=>alert('Could not reach the BOL service ('+err.message+'). The free server may be waking up — wait ~40s and try again.'))
+    .finally(()=>{if(btn){btn.disabled=false;btn.textContent=orig;}});}
 function openBOLDoc(id){renderBOLDoc(id);}
 function bolMoney(x){return money(num(x)||0);}
 function sigLabelDoc(b,key){if(key==='valuation')return 'Valuation election — '+(b.valuation==='full'?'Option 1, Full Value':'Option 2, 60¢/lb waiver');const pt=SIGPTS.find(p=>p.key===key);return pt?pt.label:key;}
