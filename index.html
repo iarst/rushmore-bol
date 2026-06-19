@@ -498,9 +498,22 @@ function vDashboard(){
   return `<div class="modebar">OFFICE · DISPATCH BOARD</div>
     <div class="card"><h2>Dispatch board</h2><p class="sub">Estimate in → assign a foreman → he confirms a 3-hour pickup window.</p>
     <div class="btnrow" style="margin:0 0 14px"><button onclick="newJob()">+ New job from estimate</button>
+    <button class="ghost" onclick="checkInbox(this)">📥 Check inbox</button>
     <span class="right" style="align-self:center"><span class="pill p-grey">${c.New||0} new</span> <span class="pill p-info">${c.Assigned||0} assigned</span> <span class="pill p-ok">${c.Scheduled||0} scheduled</span></span></div>
     <div class="joblist">${rows}</div></div>
     <div class="card"><p class="muted" style="margin:0">Prototype · steps 1–3 · runs in your browser, data saved locally on this device. Foreman accounts &amp; cross-device sync are simulated; the real version needs a backend.</p></div>`;
+}
+async function checkInbox(btn){
+  const o=btn.textContent;btn.textContent='⏳ Checking…';btn.disabled=true;
+  try{
+    const r=await fetch(BACKEND+'/ingest/poll',{method:'POST'});
+    const d=await r.json();
+    if(!d.ok)throw new Error(d.error||'failed');
+    let added=0;(d.jobs||[]).forEach(j=>{if(j&&j.id&&!getJob(j.id)){saveJob(j);added++;}});
+    btn.textContent=o;btn.disabled=false;
+    alert(added?('Imported '+added+' new estimate'+(added>1?'s':'')+' from estimates@.'):'No new estimates in the inbox.');
+    render('dashboard');
+  }catch(e){btn.textContent=o;btn.disabled=false;alert('Inbox check failed: '+e.message+'\n(The backend may be waking up, or the Gmail credentials are not set yet.)');}
 }
 function vIntake(){const opts=SAMPLES.map((s,i)=>`<option value="${i}">${esc(s.label)}</option>`).join('');
   return `<div class="modebar">OFFICE</div><div class="steps"><span class="s on">1. Intake (AI)</span><span class="s">2. Assign foreman</span><span class="s">3. Pickup window</span></div>
