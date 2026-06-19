@@ -727,7 +727,7 @@ function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);cons
     dName:e.customer||'',dStreet:splitStreet(e.dAddr),dCSZ:splitCSZ(e.dAddr),dPhone:e.phone||'',dPhone2:'',
     enrouteName:'',enroutePhone:'',
     valuation:/Full Value/i.test(e.valuation||'')?'full':'waiver',declaredValue:'',fvpEstimate:'',
-    chTransport:(e.basic!=null?e.basic:''),fuelPct:'15',chFuel:'',chPacking:'',chBulky:bulkyFeeSum(e),
+    chTransport:(e.basic!=null?e.basic:''),fuelPct:(e.fuelPct||'15'),chFuel:(function(){const base=(e.volume&&e.rate)?(+String(e.volume).replace(/,/g,'')*+e.rate):(e.basic!=null?+e.basic:0);const pct=parseFloat(e.fuelPct||'15')||0;return base&&pct?+(base*pct/100).toFixed(2):'';})(),chPacking:'',chBulky:bulkyFeeSum(e),
     chStairs:'',chElevator:'',chLongCarry:'',chShuttle:'',chSIT:'',chStgHandling:'',chExtraLabor:'',chExtraStop:'',chWaiting:'',
     chConvPGS:'',chRedelivery:'',chBinding:'',chOther:'',chTotal:(e.total!=null?e.total:''),
     locStairs:'—',locElevator:'—',locLongCarry:'—',locShuttle:'—',locSIT:'—',locStgHandling:'—',locExtraLabor:'—',locExtraStop:'—',locWaiting:'—',
@@ -798,8 +798,8 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
 
    <div class="bolsec"><h4><span class="step">5</span> Services &amp; charges</h4>
      <p class="muted" style="margin:-4px 0 6px">Pre-filled from the estimate; enter any accessorials performed on site (with location).</p>
-     ${chr('Transportation ('+e.volume+' cf @ $'+e.rate+')','b_chTransport',s.chTransport)}
-     <div class="chrow"><span>Fuel surcharge (<input id="b_fuelPct" value="${esc(s.fuelPct)}" style="width:46px;padding:4px 6px;text-align:right;display:inline-block">%)</span>${A('b_chFuel',s.chFuel)}</div>
+     <div class="chrow"><span>Transportation (${e.volume} cf @ $${e.rate})</span><input id="b_chTransport" class="mny" value="${(s.chTransport!==''&&s.chTransport!=null)?esc(s.chTransport):''}" oninput="recalcFuel()" placeholder="$"></div>
+     <div class="chrow"><span>Fuel surcharge (<input id="b_fuelPct" value="${esc(s.fuelPct)}" oninput="recalcFuel()" style="width:46px;padding:4px 6px;text-align:right;display:inline-block">% — auto)</span>${A('b_chFuel',s.chFuel)}</div>
      ${chr('Packing labor &amp; materials','b_chPacking',s.chPacking)}
      ${chr('Bulky articles','b_chBulky',s.chBulky)}
      ${chrL('Stairs','b_locStairs',s.locStairs,'b_chStairs',s.chStairs)}
@@ -864,9 +864,14 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      <p class="muted" id="sigCount2" style="margin:0 0 10px"></p>
      <div class="btnrow"><button onclick="generateBOL('${job.id}')">✅ Generate signed Bill of Lading</button><button class="ghost" onclick="openFmJob('${job.id}')">Cancel</button></div>
      <p class="muted" style="margin-top:8px">All section signatures, timestamps, device &amp; (if allowed) location are captured for the audit trail. Delivery acknowledgements are signed at delivery.</p></div>`;
-  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');window._sigState={ack:{}};fillSigBlocks();recalcBalance();},30);
+  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');window._sigState={ack:{}};fillSigBlocks();recalcFuel();recalcBalance();},30);
   window.scrollTo(0,0);
 }
+function recalcFuel(){const g=id=>{const el=document.getElementById(id);return el?(num(el.value)||0):0;};
+  const f=document.getElementById('b_chFuel');if(!f)return;
+  const base=g('b_chTransport'),pct=g('b_fuelPct');
+  if(base>0&&pct>0)f.value=(Math.round(base*pct)/100).toFixed(2);
+  recalcBalance();}
 function recalcBalance(){const g=id=>{const el=document.getElementById(id);return el?(num(el.value)||0):0;};
   const ct=document.getElementById('b_chTotal'),ref=document.getElementById('b_payTotalRef');if(ct&&ref)ref.value=ct.value;
   const bal=g('b_chTotal')-g('b_payDeposit')-g('b_payOrigin');
