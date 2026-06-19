@@ -50,6 +50,12 @@
   .volbar .vb{display:flex;flex-direction:column} .volbar .vb .n{font-size:18px;font-weight:800;color:var(--navy)} .volbar .vb .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700}
   .agday{font-weight:800;color:var(--navy);margin:16px 0 8px;font-size:12.5px;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--line);padding-bottom:5px}
   .agtime{font-weight:800;color:var(--navy);min-width:118px;font-size:13px}
+  .newsec{border:1.6px solid #f0c781;background:#fff7ea;border-radius:12px;padding:10px 10px 4px;margin:0 0 18px}
+  .newsec .newhd{display:flex;align-items:center;gap:9px;font-weight:800;color:#b9770e;font-size:13px;text-transform:uppercase;letter-spacing:.5px;padding:3px 6px 11px}
+  .newsec .newhd .cnt{background:#E0922F;color:#fff;border-radius:999px;padding:1px 9px;font-size:12px}
+  .jobrow.newrow{border-color:#f0c781;margin-bottom:8px}
+  .jobrow.newrow:hover{border-color:#E0922F;background:#fffaf0}
+  .p-new{background:#E0922F;color:#fff;font-weight:800;letter-spacing:.6px}
   .paybar{background:#e7f6ef;border:1px solid #bfe6d4;border-radius:10px;padding:11px 15px;margin:0 0 14px;font-size:15px;color:#0f6e56} .paybar b{font-size:18px} .paybar .sm2{font-size:12px;color:#3a7a63}
   /* extra services + customer notes */
   .svc{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 2px}
@@ -489,10 +495,20 @@ function officeRow(j){return `<div class="jobrow" onclick="openJob('${j.id}')">
     <div style="flex:1"><div class="id">${j.id} · ${esc(j.est?.customer)||'—'}</div>
       <div class="meta">${esc((j.est?.oAddr||'').split(',')[1]||'')} → ${esc((j.est?.dAddr||'').split(',')[1]||'')} ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} ${j.foreman?'· '+esc(j.foreman.name):''}${j.bol&&j.bol.signed?' · <b style="color:#1D9E75">BOL ✓</b>':''}</div></div>
     <div class="right">${statusPill(j.status)}</div></div>`;}
+function shortPick(j){const k=firstPickupKey(j);if(k==='9999-99-99')return 'no date';const p=k.split('-');return (+p[1])+'/'+(+p[2]);}
+function newRow(j){return `<div class="jobrow newrow" onclick="openJob('${j.id}')">
+    <div class="agtime" style="color:#b9770e;min-width:96px">📅 ${shortPick(j)}</div>
+    <div style="flex:1"><div class="id">${j.id} · ${esc(j.est?.customer)||'—'}</div>
+      <div class="meta">${esc((j.est?.oAddr||'').split(',')[1]||j.est?.oAddr||'')} → ${esc((j.est?.dAddr||'').split(',')[1]||j.est?.dAddr||'')}${j.est?.miles?' · '+esc(j.est.miles)+' mi':''}${j.source==='inbox'?' · <span style="color:#1D9E75">📥 estimates@</span>':''}</div></div>
+    <div class="right"><span class="pill p-new">NEW</span></div></div>`;}
 function vDashboard(){
-  const jobs=store.get().slice().sort((a,b)=>{const ka=firstPickupKey(a),kb=firstPickupKey(b);return ka!==kb?(ka<kb?-1:1):(fmWinOrder(a.eta&&a.eta.window)-fmWinOrder(b.eta&&b.eta.window));});
-  let rows='',cd=null;
-  jobs.forEach(j=>{const k=firstPickupKey(j);if(k!==cd){cd=k;rows+='<div class="agday">'+(k==='9999-99-99'?'Pickup date TBD':fmDateLabel(k))+'</div>';}rows+=officeRow(j);});
+  const all=store.get().slice().sort((a,b)=>{const ka=firstPickupKey(a),kb=firstPickupKey(b);return ka!==kb?(ka<kb?-1:1):(fmWinOrder(a.eta&&a.eta.window)-fmWinOrder(b.eta&&b.eta.window));});
+  const fresh=all.filter(j=>!j.foreman), rest=all.filter(j=>j.foreman);
+  let rows='';
+  if(fresh.length)rows+='<div class="newsec"><div class="newhd">🆕 New estimates · needs a foreman <span class="cnt">'+fresh.length+'</span></div>'+fresh.map(newRow).join('')+'</div>';
+  let cd=null;
+  rest.forEach(j=>{const k=firstPickupKey(j);if(k!==cd){cd=k;rows+='<div class="agday">'+(k==='9999-99-99'?'Pickup date TBD':fmDateLabel(k))+'</div>';}rows+=officeRow(j);});
+  const jobs=all;
   if(!jobs.length)rows='<div class="empty">No jobs yet. Click <b>+ New job</b> to bring one in from a broker estimate.</div>';
   const c={New:0,Assigned:0,Scheduled:0};jobs.forEach(j=>{const st=j.status==='Awaiting pickup'?'Scheduled':j.status;c[st]=(c[st]||0)+1;});
   return `<div class="modebar">OFFICE · DISPATCH BOARD</div>
