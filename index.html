@@ -151,13 +151,13 @@ const initials=n=>(n||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCa
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 let cur=null;
 
-const SAMPLE_EMAIL=`From: Demo Broker <broker@example.com>
-Subject: Moving Estimate - Job 90000001
-Customer Rep: Demo Rep  (555) 700-0000
+const SAMPLE_EMAIL=`From: Safe Ship Moving Services <demetrius.campbell@safeshipmoving.com>
+Subject: Moving Estimate - Job 26117249
+Customer Rep: Demetrius Campbell II  (561) 807-3341
 
-Customer: Jordan Demo   (555) 010-2026   demo@example.com
-Moving From: 100 Test Street, Demo City, WA 98000  (House)
-Moving To: 200 Sample Ave, Trial Town, WA 98100  (House)
+Customer: Jordan Sample   (555) 010-1234   customer@example.com
+Moving From: 123 Demo Street, Sampletown, WA 98000  (House)
+Moving To: 456 Example Ave, Demo City, WA 98001  (House)
 Move Type: Long Distance, 151 miles
 Move Day: Thursday/Friday
 Estimated Volume: 1650 cf    Rate: $2.00 per cf
@@ -230,7 +230,7 @@ OUT DOOR FURNITURE
 1 PATIO COFFEE TABLE
 6 PATIO CHAIR`;
 
-const SAMPLE_PGS=`From: Demo Broker <broker@example.com>
+const SAMPLE_PGS=`From: Safe Ship Moving Services <demetrius.campbell@safeshipmoving.com>
 Subject: Moving Estimate - Job 26169911
 Customer Rep: Marcus Lee  (561) 807-2210
 
@@ -267,7 +267,7 @@ GENERAL
 1 TREADMILL (200 BULK FEE)
 8 BOX, MEDIUM`;
 
-const SAMPLE_BULKY=`From: Demo Broker <broker@example.com>
+const SAMPLE_BULKY=`From: Safe Ship Moving Services <demetrius.campbell@safeshipmoving.com>
 Subject: Moving Estimate - Job 26106431
 Customer Rep: Tanya Brooks  (561) 807-3390
 
@@ -303,7 +303,7 @@ MASTER BEDROOM
 1 DRESSER, TRIPLE
 30 BOX, MEDIUM`;
 
-const SAMPLE_PACK=`From: Demo Broker <broker@example.com>
+const SAMPLE_PACK=`From: Safe Ship Moving Services <demetrius.campbell@safeshipmoving.com>
 Subject: Moving Estimate - Job 26018814
 Customer Rep: Priya Nair  (561) 807-4408
 
@@ -339,7 +339,7 @@ GENERAL
 25 BOX, MEDIUM
 4 BOX, WARDROBE`;
 
-const SAMPLE_STORAGE=`From: Demo Broker <broker@example.com>
+const SAMPLE_STORAGE=`From: Safe Ship Moving Services <demetrius.campbell@safeshipmoving.com>
 Subject: Moving Estimate - Job 26201050
 Customer Rep: Greg Sanders  (561) 807-5567
 
@@ -371,7 +371,7 @@ GENERAL
 1 DRYER`;
 
 const SAMPLES=[
-  {label:'1 · Demo — large house, bulky garage (Job 90000001)',text:SAMPLE_EMAIL},
+  {label:'1 · Sample estimate — large house, bulky garage',text:SAMPLE_EMAIL},
   {label:'2 · Webb — PGS premium + narrow-street shuttle (Job 26169911)',text:SAMPLE_PGS},
   {label:'3 · Ortiz — piano + 600 lb gun safe, bulky (Job 26106431)',text:SAMPLE_BULKY},
   {label:'4 · Kim — full pack + fragile art, elevators (Job 26018814)',text:SAMPLE_PACK},
@@ -455,7 +455,9 @@ function firstPickupKey(j){
   const md=p.match(/(\d{1,2})\/(\d{1,2})/),yr=p.match(/(\d{4})/);
   return (md&&yr)?yr[1]+'-'+('0'+md[1]).slice(-2)+'-'+('0'+md[2]).slice(-2):'9999-99-99';
 }
-function saveJob(job){const jobs=store.get();const i=jobs.findIndex(j=>j.id===job.id);const c=JSON.parse(JSON.stringify(job));if(i>=0)jobs[i]=c;else jobs.unshift(c);store.set(jobs);}
+function saveJob(job){const jobs=store.get();const i=jobs.findIndex(j=>j.id===job.id);const c=JSON.parse(JSON.stringify(job));if(i>=0)jobs[i]=c;else jobs.unshift(c);store.set(jobs);
+  try{fetch(BACKEND+'/board/job',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)}).catch(()=>{});}catch(e){}}
+async function syncBoard(){try{const r=await fetch(BACKEND+'/board');const d=await r.json();if(d&&d.ok&&Array.isArray(d.jobs))store.set(d.jobs);}catch(e){}}
 function getJob(id){return store.get().find(j=>j.id===id);}
 function statusPill(s){if(s==='Awaiting pickup')s='Scheduled';const m={New:'p-grey',Assigned:'p-info',Scheduled:'p-ok'};return '<span class="pill '+(m[s]||'p-grey')+'">'+s+'</span>';}
 function foremanLink(j){return location.origin+location.pathname+'#fm='+enc(j);}
@@ -537,9 +539,9 @@ async function checkInbox(btn){
     const r=await fetch(BACKEND+'/ingest/poll',{method:'POST'});
     const d=await r.json();
     if(!d.ok)throw new Error(d.error||'failed');
-    let added=importJobs(d.jobs);
+    if(Array.isArray(d.jobs))store.set(d.jobs);
     btn.textContent=o;btn.disabled=false;
-    alert(added?('Imported '+added+' new estimate'+(added>1?'s':'')+' from estimates@.'):'No new estimates in the inbox.');
+    alert(d.new?('Imported '+d.new+' new estimate'+(d.new>1?'s':'')+' from estimates@.'):'No new estimates in the inbox.');
     render('dashboard');
   }catch(e){btn.textContent=o;btn.disabled=false;alert('Inbox check failed: '+e.message+'\n(The backend may be waking up, or the Gmail credentials are not set yet.)');}
 }
@@ -721,7 +723,7 @@ function splitCSZ(f){const i=(f||'').indexOf(',');return i<0?'':f.slice(i+1).tri
 function bulkyFeeSum(e){if(!e||!e.inv)return '';let s=0;e.inv.rooms.forEach(r=>r.items.forEach(it=>{const m=it.name.match(/(\d+)\s*BULK\s*FEE/i);if(m)s+=+m[1];}));return s||'';}
 function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);const d=(job.eta&&job.eta.date)||'';
   return Object.assign({
-    usdot:'0000000',mc:'000000',order:job.id,vanNo:'',crew:'',interliner:'',
+    usdot:'4086767',mc:'1560709',order:job.id,vanNo:'',crew:'',interliner:'',
     agreedPickup:d,actualPickup:d,firstAvail:e.firstDelivery||'',deliverNoLater:'',
     oName:e.customer||'',oStreet:splitStreet(e.oAddr),oCSZ:splitCSZ(e.oAddr),oPhone:e.phone||'',oPhone2:'',
     dName:e.customer||'',dStreet:splitStreet(e.dAddr),dCSZ:splitCSZ(e.dAddr),dPhone:e.phone||'',dPhone2:'',
@@ -1035,6 +1037,8 @@ function renderBOLDoc(id){const j=getJob(id);if(!j||!j.bol){goForeman();return;}
 function initApp(){
   try{const all=store.get();const clean=all.filter(j=>j.id!=='90000001');if(clean.length!==all.length)store.set(clean);}catch(e){}
   router();
+  // pull the shared board so this device sees the same jobs as every other device
+  if(isOfficeView())syncBoard().then(()=>{if(!location.hash)render('dashboard');});
   setTimeout(autoPoll,4000);
   setInterval(autoPoll,5*60*1000);
 }
@@ -1055,10 +1059,11 @@ function isOfficeView(){const h=location.hash||'';return !(h.indexOf('#j=')===0|
 async function autoPoll(){
   if(!isOfficeView())return;
   try{
+    const before=store.get().length;
     const r=await fetch(BACKEND+'/ingest/poll',{method:'POST'});
     const d=await r.json();if(!d.ok)return;
-    let added=importJobs(d.jobs);
-    if(added&&!location.hash)render('dashboard');
+    if(Array.isArray(d.jobs))store.set(d.jobs);
+    if(!location.hash&&(d.new||store.get().length!==before))render('dashboard');
   }catch(e){}
 }
 </script>
