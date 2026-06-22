@@ -760,7 +760,7 @@ function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);cons
     valuation:/Full Value/i.test(e.valuation||'')?'full':'waiver',declaredValue:'',fvpEstimate:'',
     chTransport:(e.basic!=null?e.basic:''),fuelPct:(e.fuelPct||'15'),chFuel:(_fuel||''),chPacking:'',chBulky:bulkyFeeSum(e),
     chStairs:'',chElevator:'',chLongCarry:'',chShuttle:'',chSIT:'',chStgHandling:'',chExtraLabor:'',chExtraStop:'',chWaiting:'',
-    chConvPGS:'',chRedelivery:'',chBinding:'',chOther:(_other||''),chTotal:(e.total!=null?e.total:''),
+    chConvPGS:'',chRedelivery:'',chBinding:'',chOther:(_other||''),chOtherDesc:(_other>0?'Binding estimate fee':''),chTotal:(e.total!=null?e.total:''),
     locStairs:'—',locElevator:'—',locLongCarry:'—',locShuttle:'—',locSIT:'—',locStgHandling:'—',locExtraLabor:'—',locExtraStop:'—',locWaiting:'—',
     payDiscount:'',payDeposit:(e.deposit!=null?e.deposit:''),payOrigin:'',payBalanceDest:'',payPriceAdj:'',payDestination:'',payBalance30:'',method:'',
     dedicatedTruck:'',expeditedDate:'',stairsFlights:'',extraLaborHrs:'',
@@ -851,7 +851,7 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      ${chr('Convenience fee + PGS delivery','b_chConvPGS',s.chConvPGS)}
      ${chr('Redelivery','b_chRedelivery',s.chRedelivery)}
      ${chr('Binding estimate fee','b_chBinding',s.chBinding)}
-     ${chr('Other / remaining estimate charges','b_chOther',s.chOther)}</div>
+     <div class="chrow"><span>Other — <input id="b_chOtherDesc" value="${esc(s.chOtherDesc)}" placeholder="describe (e.g. Binding estimate fee)" style="width:230px;padding:4px 6px"></span>${A('b_chOther',s.chOther)}</div></div>
      <p class="muted" style="margin:6px 0 2px;font-size:11.5px">The total auto-adds every line above so it always matches. Any estimate amount not itemized sits in <b>Other</b> — move it into the right line if you know what it is.</p>
      <div class="chrow tot"><span>TOTAL APPLICABLE CHARGES <span class="muted">(auto)</span></span><input id="b_chTotal" class="mny big" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" readonly style="background:#eef3f9;font-weight:800"></div>
      <div class="subh">Special delivery (AS-22) <span class="tag tag-b">EXTRA</span></div>
@@ -988,7 +988,7 @@ function generateBOL(id){const v=s=>{const el=document.getElementById(s);return 
     valuation:val,declaredValue:v('b_declaredValue'),fvpEstimate:v('b_fvpEstimate'),
     chTransport:v('b_chTransport'),fuelPct:v('b_fuelPct'),chFuel:v('b_chFuel'),chPacking:v('b_chPacking'),chBulky:v('b_chBulky'),
     chStairs:v('b_chStairs'),chElevator:v('b_chElevator'),chLongCarry:v('b_chLongCarry'),chShuttle:v('b_chShuttle'),chSIT:v('b_chSIT'),chStgHandling:v('b_chStgHandling'),chExtraLabor:v('b_chExtraLabor'),chExtraStop:v('b_chExtraStop'),chWaiting:v('b_chWaiting'),
-    chConvPGS:v('b_chConvPGS'),chRedelivery:v('b_chRedelivery'),chBinding:v('b_chBinding'),chOther:v('b_chOther'),chTotal:v('b_chTotal'),
+    chConvPGS:v('b_chConvPGS'),chRedelivery:v('b_chRedelivery'),chBinding:v('b_chBinding'),chOther:v('b_chOther'),chOtherDesc:v('b_chOtherDesc'),chTotal:v('b_chTotal'),
     locStairs:v('b_locStairs'),locElevator:v('b_locElevator'),locLongCarry:v('b_locLongCarry'),locShuttle:v('b_locShuttle'),locSIT:v('b_locSIT'),locStgHandling:v('b_locStgHandling'),locExtraLabor:v('b_locExtraLabor'),locExtraStop:v('b_locExtraStop'),locWaiting:v('b_locWaiting'),
     payDiscount:v('b_payDiscount'),payDeposit:v('b_payDeposit'),payOrigin:v('b_payOrigin'),payBalanceDest:v('b_payBalanceDest'),payPriceAdj:v('b_payPriceAdj'),payDestination:v('b_payDestination'),payBalance30:v('b_payBalance30'),method:v('b_method'),
     dedicatedTruck:v('b_dedicatedTruck'),expeditedDate:v('b_expeditedDate'),stairsFlights:v('b_stairsFlights'),extraLaborHrs:v('b_extraLaborHrs'),
@@ -1030,6 +1030,7 @@ function backendPayload(job){const e=job.est||{},b=job.bol||{};const oc=parseCSZ
     chExtraLabor:b.chExtraLabor,locExtraLabor:b.locExtraLabor,chExtraStop:b.chExtraStop,locExtraStop:b.locExtraStop,chWaiting:b.chWaiting,locWaiting:b.locWaiting,
     chRedelivery:b.chRedelivery,chAccTotal:chAccTotal?chAccTotal.toFixed(2):'',
     chOther:((num(b.chOther)||0)+(num(b.chConvPGS)||0)+(num(b.chBinding)||0))?((num(b.chOther)||0)+(num(b.chConvPGS)||0)+(num(b.chBinding)||0)).toFixed(2):'',
+    chOtherDesc:(function(){const p=[];if(b.chOtherDesc)p.push(b.chOtherDesc);if((num(b.chBinding)||0)>0&&!/bind/i.test(b.chOtherDesc||''))p.push('Binding est fee');if((num(b.chConvPGS)||0)>0)p.push('Convenience + PGS');return p.join(' + ');})(),
     chTotal:b.chTotal,payDiscount:b.payDiscount,payDeposit:b.payDeposit,payOrigin:b.payOrigin,payBalanceDest:b.payBalanceDest,payPriceAdj:b.payPriceAdj,payDestination:b.payDestination,payBalance30:b.payBalance30,
     dedicatedTruck:b.dedicatedTruck,expeditedDate:b.expeditedDate,fullPack:b.fullPack,materialsNote:b.materialsNote,storageStart:b.storageStart,storageEnd:b.storageEnd,walkupFlights:b.walkupFlights,dwellingD:b.dwellingD,
     ttAccess:b.ttAccess,storage:b.storage,dwellingO:b.dwellingO,volume:e.volume,rate:e.rate,packTotal:b.packTotal,
