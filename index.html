@@ -470,12 +470,9 @@ function firstPickupKey(j){
 function saveJob(job){const jobs=store.get();const i=jobs.findIndex(j=>j.id===job.id);const c=JSON.parse(JSON.stringify(job));if(i>=0)jobs[i]=c;else jobs.unshift(c);store.set(jobs);
   try{fetch(BACKEND+'/board/job',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)}).catch(()=>{});}catch(e){}}
 function mergeRemote(remote){
-  if(!Array.isArray(remote))return;
-  const rids=new Set(remote.map(j=>String(j.id)));
-  // promote jobs that only exist on this device (first-run migration / offline edits) up to the shared board
-  const localOnly=store.get().filter(j=>j&&j.id&&!rids.has(String(j.id)));
-  localOnly.forEach(j=>{try{fetch(BACKEND+'/board/job',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(j)}).catch(()=>{});}catch(e){}});
-  store.set(remote.concat(localOnly));
+  // the shared database is the source of truth — mirror it exactly so deletes/edits propagate.
+  // (new jobs created on a device are pushed to the DB at save time via saveJob, so nothing is lost.)
+  if(Array.isArray(remote))store.set(remote);
 }
 async function syncBoard(){try{const r=await fetch(BACKEND+'/board');const d=await r.json();if(d&&d.ok)mergeRemote(d.jobs);}catch(e){}}
 function getJob(id){return store.get().find(j=>j.id===id);}
