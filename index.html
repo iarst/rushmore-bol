@@ -741,14 +741,24 @@ function bulkyFeeSum(e){if(!e||!e.inv)return '';let s=0;e.inv.rooms.forEach(r=>r
 function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);const d=(job.eta&&job.eta.date)||'';
   // seed charge lines so they SUM to the estimate total (any unitemized remainder lands in "Other")
   const _vol=e.volume?+String(e.volume).replace(/,/g,''):0;
-  const _base=(_vol&&e.rate)?_vol*(+e.rate):(e.basic!=null?+e.basic:0);
   const _pct=parseFloat(e.fuelPct||'15')||0;
-  const _fuel=_base&&_pct?+(_base*_pct/100).toFixed(2):0;
-  const _transport=(e.basic!=null?+e.basic:0);
-  const _bulky=+bulkyFeeSum(e)||0;
-  const _total=(e.total!=null?+e.total:0);
-  const _other=_total>0?Math.max(0,+(_total-_transport-_fuel-_bulky).toFixed(2)):0;
-  const _packRate=_vol<=500?2:(_vol<=1000?1.75:1.5);  // PMS-19 full-packing rate by volume tier
+  const _basic=(e.basic!=null?+e.basic:0);
+  const _fuelComp=(_basic&&_pct)?+(_basic*_pct/100).toFixed(2):0;
+  const _fuelA=(e.fuelAmt!=null?+e.fuelAmt:_fuelComp)||0;
+  const _packA=+e.packAmt||0;
+  const _shuttleA=+e.shuttleAmt||0;
+  const _bulkyA=(e.bulkyAmt!=null?+e.bulkyAmt:(+bulkyFeeSum(e)||0))||0;
+  const _convA=(+e.convenienceAmt||0)+(+e.pgsAmt||0);   // "Convenience fee + PGS delivery" row
+  const _exped=+e.expeditedAmt||0;
+  const _binding=+e.bindingAmt||0;
+  const _disc=+e.discount||0;
+  const _net=(e.total!=null?+e.total:0);
+  const _gross=+( _net+_disc ).toFixed(2);
+  // every charge that has its own BOL row; everything else (binding, expedited, itemized extras) reconciles into "Other"
+  const _namedNonOther=_basic+_fuelA+_packA+_shuttleA+_bulkyA+_convA;
+  const _other=_gross>0?Math.max(0,+(_gross-_namedNonOther).toFixed(2)):0;
+  const _packRateTier=_vol<=500?2:(_vol<=1000?1.75:1.5);
+  const _packRate=(_packA>0&&_vol>0)?+(_packA/_vol).toFixed(2):_packRateTier;  // use the estimate's actual $/cf when packing was quoted
   return Object.assign({
     usdot:'4086767',mc:'1560709',order:job.id,vanNo:'',crew:'',interliner:'',
     agreedPickup:d,actualPickup:d,firstAvail:e.firstDelivery||'',deliverNoLater:'',
@@ -756,13 +766,13 @@ function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);cons
     dName:e.customer||'',dStreet:splitStreet(e.dAddr),dCSZ:splitCSZ(e.dAddr),dPhone:e.phone||'',dPhone2:'',
     enrouteName:'',enroutePhone:'',
     valuation:/Full Value/i.test(e.valuation||'')?'full':'waiver',declaredValue:'',fvpEstimate:'',
-    chTransport:(e.basic!=null?e.basic:''),fuelPct:(e.fuelPct||'15'),chFuel:(_fuel||''),chPacking:'',chBulky:bulkyFeeSum(e),
-    chStairs:'',chElevator:'',chLongCarry:'',chShuttle:'',chSIT:'',chStgHandling:'',chExtraLabor:'',chExtraStop:'',chWaiting:'',
-    chConvPGS:'',chRedelivery:'',chBinding:'',chOther:(_other||''),chOtherDesc:(_other>0?'Binding estimate fee':''),chTotal:(e.total!=null?e.total:''),
-    locStairs:'—',locElevator:'—',locLongCarry:'—',locShuttle:'—',locSIT:'—',locStgHandling:'—',locExtraLabor:'—',locExtraStop:'—',locWaiting:'—',
-    payDiscount:'',payDeposit:(e.deposit!=null?e.deposit:''),payOrigin:'',payBalanceDest:'',payPriceAdj:'',payDestination:'',payBalance30:'',method:'',
+    chTransport:(_basic||''),fuelPct:(e.fuelPct||'15'),chFuel:(_fuelA||''),chPacking:(_packA||''),chBulky:(_bulkyA||''),
+    chStairs:'',chElevator:'',chLongCarry:'',chShuttle:(_shuttleA||''),chSIT:'',chStgHandling:'',chExtraLabor:'',chExtraStop:'',chWaiting:'',
+    chConvPGS:(_convA||''),chRedelivery:'',chBinding:'',chOther:(_other||''),chOtherDesc:('Binding estimate fee'+(_exped>0?' + Expedited':'')),chTotal:(_gross||''),
+    locStairs:'—',locElevator:'—',locLongCarry:'—',locShuttle:(_shuttleA>0?'Both':'—'),locSIT:'—',locStgHandling:'—',locExtraLabor:'—',locExtraStop:'—',locWaiting:'—',
+    payDiscount:(_disc||''),payDeposit:(e.deposit!=null?e.deposit:''),payOrigin:'',payBalanceDest:'',payPriceAdj:'',payDestination:'',payBalance30:'',method:'',
     dedicatedTruck:'',expeditedDate:'',stairsFlights:'',extraLaborHrs:'',
-    fullPackChoice:(e.fullPack?'Yes':'No'),packCf:(_vol||''),packRateCf:_packRate.toFixed(2),packMaterials:[],materialsNote:'',packTotal:'',
+    fullPackChoice:(_packA>0?'Yes':(e.fullPack?'Yes':'No')),packCf:(_vol||''),packRateCf:_packRate.toFixed(2),packMaterials:[],materialsNote:'',packTotal:'',
     storageChoice:'No',storageStart:'',storageEnd:'',ttAccessChoice:'Tractor-trailer access available',dwellingO:e.oType||'Private Home',dwellingD:e.dType||'Private Home',walkupFlights:'',accessDenied:false,accessExplain:'',
     exceptions:'',consent:false,custSig:'',foreSig:''},b);}
 function openBOL(id){renderBOL(id);}
@@ -920,7 +930,7 @@ function recalcTotal(){const g=id=>{const el=document.getElementById(id);return 
   recalcBalance();}
 function recalcBalance(){const g=id=>{const el=document.getElementById(id);return el?(num(el.value)||0):0;};
   const ct=document.getElementById('b_chTotal'),ref=document.getElementById('b_payTotalRef');if(ct&&ref)ref.value=ct.value;
-  const bal=g('b_chTotal')-g('b_payDeposit')-g('b_payOrigin');
+  const bal=g('b_chTotal')-g('b_payDiscount')-g('b_payDeposit')-g('b_payOrigin');
   const el=document.getElementById('b_payBalanceDest');if(el)el.value=(Math.round(bal*100)/100).toFixed(2);}
 function toggleStorage(){const sel=document.getElementById('b_storage'),box=document.getElementById('storageDates');if(box)box.style.display=(sel&&sel.value==='Yes')?'':'none';}
 /* Rushmore packing materials price list (from PMS-19) */
