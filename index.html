@@ -1054,7 +1054,7 @@ function initApp(){
   setInterval(autoPoll,5*60*1000);
 }
 function gate(){
-  if(localStorage.getItem('rvl_pin')==='2026'){initApp();return;}
+  if(localStorage.getItem('rvl_pin')==='2020'){initApp();return;}
   const ov=document.createElement('div');ov.id='pinGate';
   ov.innerHTML='<div class="pinbox"><div class="pinlogo">Rushmore Van Lines</div><div class="pinsub">Enter access PIN to continue</div><input id="pinIn" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="PIN"><button id="pinBtn">Enter</button><div id="pinErr" class="pinerr"></div></div>';
   document.body.appendChild(ov);
