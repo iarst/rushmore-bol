@@ -1059,7 +1059,7 @@ function gate(){
   ov.innerHTML='<div class="pinbox"><div class="pinlogo">Rushmore Van Lines</div><div class="pinsub">Enter access PIN to continue</div><input id="pinIn" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="PIN"><button id="pinBtn">Enter</button><div id="pinErr" class="pinerr"></div></div>';
   document.body.appendChild(ov);
   const inp=ov.querySelector('#pinIn'),btn=ov.querySelector('#pinBtn'),err=ov.querySelector('#pinErr');
-  function tryPin(){if(inp.value.trim()==='2026'){localStorage.setItem('rvl_pin','2026');ov.remove();initApp();}else{err.textContent='Incorrect PIN — try again';inp.value='';inp.focus();}}
+  function tryPin(){if(inp.value.trim()==='2026'){localStorage.setItem('rvl_pin','2020');ov.remove();initApp();}else{err.textContent='Incorrect PIN — try again';inp.value='';inp.focus();}}
   btn.onclick=tryPin;inp.addEventListener('keydown',e=>{if(e.key==='Enter')tryPin();});
   setTimeout(()=>inp.focus(),60);
 }
