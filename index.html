@@ -748,6 +748,7 @@ function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);cons
   const _bulky=+bulkyFeeSum(e)||0;
   const _total=(e.total!=null?+e.total:0);
   const _other=_total>0?Math.max(0,+(_total-_transport-_fuel-_bulky).toFixed(2)):0;
+  const _packRate=_vol<=500?2:(_vol<=1000?1.75:1.5);  // PMS-19 full-packing rate by volume tier
   return Object.assign({
     usdot:'4086767',mc:'1560709',order:job.id,vanNo:'',crew:'',interliner:'',
     agreedPickup:d,actualPickup:d,firstAvail:e.firstDelivery||'',deliverNoLater:'',
@@ -761,7 +762,7 @@ function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);cons
     locStairs:'—',locElevator:'—',locLongCarry:'—',locShuttle:'—',locSIT:'—',locStgHandling:'—',locExtraLabor:'—',locExtraStop:'—',locWaiting:'—',
     payDiscount:'',payDeposit:(e.deposit!=null?e.deposit:''),payOrigin:'',payBalanceDest:'',payPriceAdj:'',payDestination:'',payBalance30:'',method:'',
     dedicatedTruck:'',expeditedDate:'',stairsFlights:'',extraLaborHrs:'',
-    fullPackChoice:(e.fullPack?'Yes':'No'),packRateCf:'',materialsNote:'',packTotal:'',
+    fullPackChoice:(e.fullPack?'Yes':'No'),packCf:(_vol||''),packRateCf:_packRate.toFixed(2),packMaterials:[],materialsNote:'',packTotal:'',
     storageChoice:'No',storageStart:'',storageEnd:'',ttAccessChoice:'Tractor-trailer access available',dwellingO:e.oType||'Private Home',dwellingD:e.dType||'Private Home',walkupFlights:'',accessDenied:false,accessExplain:'',
     exceptions:'',consent:false,custSig:'',foreSig:''},b);}
 function openBOL(id){renderBOL(id);}
@@ -886,9 +887,15 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      <div class="f"><label class="fl">Full packing performed? <span class="req">*</span></label><select id="b_fullPack" onchange="togglePack()"><option value="">Select…</option><option ${s.fullPackChoice==='Yes'?'selected':''}>Yes</option><option ${s.fullPackChoice==='No'?'selected':''}>No</option></select></div>
      ${bulkyList(e).length?`<div class="muted" style="margin:6px 0;color:#7a5200">⚠ Bulky from inventory: ${esc(bulkyList(e).join(' · '))}</div>`:''}
      <div id="packDetail" style="display:none">
-       <div class="twocol"><div class="f"><label class="fl">Packing rate ($ per cu ft) <span class="req">*</span></label><input id="b_packRateCf" class="mny" value="${esc(s.packRateCf)}" placeholder="$/cf"></div>
-       <div class="f"><label class="fl">Total packing &amp; materials</label><input id="b_packTotal" class="mny" value="${esc(s.packTotal)}" placeholder="$"></div></div>
-       <div class="f"><label class="fl">Materials / notes</label><input id="b_materialsNote" value="${esc(s.materialsNote)}" placeholder="e.g. 20 dish packs, 4 wardrobe boxes, TV cartons"></div></div></div>
+       <div class="twocol"><div class="f"><label class="fl">Job volume (cu ft)</label><input id="b_packCf" class="mny" value="${esc(s.packCf)}" oninput="recalcPack()" placeholder="cf"></div>
+       <div class="f"><label class="fl">Packing rate ($ per cu ft) <span class="req">*</span></label><input id="b_packRateCf" class="mny" value="${esc(s.packRateCf)}" oninput="recalcPack()" placeholder="$/cf"></div></div>
+       <div class="chrow"><span>Packing labor (volume × rate)</span><input id="b_packLabor" class="mny" readonly style="background:#f3f6fb"></div>
+       <div class="subh" style="margin-top:10px">Extra materials</div>
+       <div id="matRows"></div>
+       <button type="button" class="ghost sm" onclick="addMatRow()" style="margin:4px 0 2px">+ Add material</button>
+       <div class="chrow"><span>Materials subtotal</span><input id="b_packMatTotal" class="mny" readonly style="background:#f3f6fb"></div>
+       <div class="chrow tot"><span>TOTAL PACKING &amp; MATERIALS <span class="muted">(auto)</span></span><input id="b_packTotal" class="mny big" readonly style="background:#eef3f9;font-weight:800"></div>
+       <div class="f"><label class="fl">Materials / notes</label><input id="b_materialsNote" value="${esc(s.materialsNote)}" placeholder="anything not in the list above"></div></div></div>
    <div class="sigblock" id="sig_pms"></div>
 
    <div class="bolsec"><h4><span class="step">9</span> Condition &amp; exceptions</h4>
@@ -916,7 +923,22 @@ function recalcBalance(){const g=id=>{const el=document.getElementById(id);retur
   const bal=g('b_chTotal')-g('b_payDeposit')-g('b_payOrigin');
   const el=document.getElementById('b_payBalanceDest');if(el)el.value=(Math.round(bal*100)/100).toFixed(2);}
 function toggleStorage(){const sel=document.getElementById('b_storage'),box=document.getElementById('storageDates');if(box)box.style.display=(sel&&sel.value==='Yes')?'':'none';}
-function togglePack(){const sel=document.getElementById('b_fullPack'),box=document.getElementById('packDetail');if(box)box.style.display=(sel&&sel.value==='Yes')?'':'none';}
+/* Rushmore packing materials price list (from PMS-19) */
+const PACK_MATERIALS=[{n:'Book Box',p:20},{n:'Medium Box',p:25},{n:'Large Box',p:30},{n:'Dish Pack',p:15},{n:'Picture/Mirror Box',p:25},{n:'Wardrobe Box',p:35},{n:'Mattress Cover',p:40},{n:'Bubble wrap (per ft)',p:2},{n:'Shrink Wrap (per item)',p:20},{n:'Tape (per unit)',p:3.5},{n:'Newsprint Paper (per bundle)',p:42},{n:'Blanket purchase',p:30},{n:'TV Packing up to 41"',p:75},{n:'TV Packing over 41"',p:100},{n:'Soft Crate Small',p:100},{n:'Soft Crate Medium',p:150},{n:'Soft Crate Large',p:175}];
+function matOptions(sel){return '<option value="">— material —</option>'+PACK_MATERIALS.map(m=>`<option value="${m.n}" data-price="${m.p}" ${sel===m.n?'selected':''}>${m.n} ($${m.p.toFixed(2)})</option>`).join('');}
+function addMatRow(name,qty){const box=document.getElementById('matRows');if(!box)return;const d=document.createElement('div');d.className='matrow';d.style.cssText='display:flex;gap:8px;align-items:center;margin:4px 0';d.innerHTML='<select class="matSel" onchange="recalcPack()" style="flex:1;padding:5px 6px">'+matOptions(name||'')+'</select><input class="matQty" type="number" min="0" value="'+(qty!=null?qty:'')+'" oninput="recalcPack()" placeholder="qty" style="width:64px;padding:5px 6px;text-align:right"><span class="matLine" style="width:84px;text-align:right;font-weight:700">$0.00</span><button type="button" class="padclear" onclick="this.closest(\'.matrow\').remove();recalcPack()">✕</button>';box.appendChild(d);recalcPack();}
+function recalcPack(){const g=id=>{const el=document.getElementById(id);return el?(num(el.value)||0):0;};
+  const labor=Math.round(g('b_packCf')*g('b_packRateCf')*100)/100;
+  const lab=document.getElementById('b_packLabor');if(lab)lab.value=labor?labor.toFixed(2):'';
+  let mat=0;document.querySelectorAll('#matRows .matrow').forEach(r=>{const sel=r.querySelector('.matSel');const o=sel.selectedOptions[0];const price=+((o&&o.dataset.price)||0);const qty=num(r.querySelector('.matQty').value)||0;const line=Math.round(price*qty*100)/100;r.querySelector('.matLine').textContent='$'+line.toFixed(2);mat+=line;});
+  const mt=document.getElementById('b_packMatTotal');if(mt)mt.value=mat?mat.toFixed(2):'';
+  const tot=Math.round((labor+mat)*100)/100;
+  const pt=document.getElementById('b_packTotal');if(pt)pt.value=tot?tot.toFixed(2):'';
+  const cp=document.getElementById('b_chPacking');if(cp)cp.value=tot?tot.toFixed(2):'';  // feed the grand total
+  recalcTotal();}
+function togglePack(){const sel=document.getElementById('b_fullPack'),box=document.getElementById('packDetail');const on=sel&&sel.value==='Yes';if(box)box.style.display=on?'':'none';
+  if(on){if(!document.querySelectorAll('#matRows .matrow').length){const seed=(_bolSeed&&_bolSeed.packMaterials)||[];(seed.length?seed:[null]).forEach(m=>addMatRow(m&&m.name,m&&m.qty));}recalcPack();}
+  else{const cp=document.getElementById('b_chPacking');if(cp)cp.value='';recalcTotal();}}
 const SIG_TEXT={
  valuation:'I have selected the valuation option above and received the "Your Rights and Responsibilities When You Move" booklet.',
  documents:'I have received the publications: Ready to Move; Claim Filing & Arbitration Program; tariff availability, method of conversion and removed weighing of the truck.',
@@ -992,7 +1014,7 @@ function generateBOL(id){const v=s=>{const el=document.getElementById(s);return 
     locStairs:v('b_locStairs'),locElevator:v('b_locElevator'),locLongCarry:v('b_locLongCarry'),locShuttle:v('b_locShuttle'),locSIT:v('b_locSIT'),locStgHandling:v('b_locStgHandling'),locExtraLabor:v('b_locExtraLabor'),locExtraStop:v('b_locExtraStop'),locWaiting:v('b_locWaiting'),
     payDiscount:v('b_payDiscount'),payDeposit:v('b_payDeposit'),payOrigin:v('b_payOrigin'),payBalanceDest:v('b_payBalanceDest'),payPriceAdj:v('b_payPriceAdj'),payDestination:v('b_payDestination'),payBalance30:v('b_payBalance30'),method:v('b_method'),
     expeditedDate:v('b_expeditedDate'),stairsFlights:v('b_stairsFlights'),extraLaborHrs:v('b_extraLaborHrs'),
-    fullPack:(v('b_fullPack')==='Yes'),fullPackChoice:v('b_fullPack'),packRateCf:v('b_packRateCf'),materialsNote:v('b_materialsNote'),packTotal:v('b_packTotal'),
+    fullPack:(v('b_fullPack')==='Yes'),fullPackChoice:v('b_fullPack'),packCf:v('b_packCf'),packRateCf:v('b_packRateCf'),packLabor:v('b_packLabor'),packMatTotal:v('b_packMatTotal'),packMaterials:[...document.querySelectorAll('#matRows .matrow')].map(r=>{const sel=r.querySelector('.matSel'),o=sel.selectedOptions[0];const name=sel.value,price=+((o&&o.dataset.price)||0),qty=num(r.querySelector('.matQty').value)||0;return (name&&qty)?{name:name,price:price,qty:qty,total:Math.round(price*qty*100)/100}:null;}).filter(Boolean),materialsNote:v('b_materialsNote'),packTotal:v('b_packTotal'),
     storage:(v('b_storage')==='Yes'),storageChoice:v('b_storage'),storageStart:v('b_storageStart'),storageEnd:v('b_storageEnd'),ttAccess:(v('b_ttAccess')==='Tractor-trailer access available'),ttAccessChoice:v('b_ttAccess'),dwellingO:v('b_dwellingO'),dwellingD:v('b_dwellingD'),walkupFlights:v('b_walkupFlights'),accessDenied:ck('b_accessDenied'),accessExplain:v('b_accessExplain'),
     exceptions:v('b_exceptions'),originAmt:v('b_payOrigin'),
     sigs:st.ack,consent:true,custSig:cust,foreSig:fore,signed:true,signedAt:now(),device:(navigator.userAgent||'').slice(0,70),geo:window._geo||null});
