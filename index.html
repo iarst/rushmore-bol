@@ -742,6 +742,15 @@ function splitStreet(f){const i=(f||'').indexOf(',');return i<0?(f||''):f.slice(
 function splitCSZ(f){const i=(f||'').indexOf(',');return i<0?'':f.slice(i+1).trim();}
 function bulkyFeeSum(e){if(!e||!e.inv)return '';let s=0;e.inv.rooms.forEach(r=>r.items.forEach(it=>{const m=it.name.match(/(\d+)\s*BULK\s*FEE/i);if(m)s+=+m[1];}));return s||'';}
 function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);const d=(job.eta&&job.eta.date)||'';
+  // seed charge lines so they SUM to the estimate total (any unitemized remainder lands in "Other")
+  const _vol=e.volume?+String(e.volume).replace(/,/g,''):0;
+  const _base=(_vol&&e.rate)?_vol*(+e.rate):(e.basic!=null?+e.basic:0);
+  const _pct=parseFloat(e.fuelPct||'15')||0;
+  const _fuel=_base&&_pct?+(_base*_pct/100).toFixed(2):0;
+  const _transport=(e.basic!=null?+e.basic:0);
+  const _bulky=+bulkyFeeSum(e)||0;
+  const _total=(e.total!=null?+e.total:0);
+  const _other=_total>0?Math.max(0,+(_total-_transport-_fuel-_bulky).toFixed(2)):0;
   return Object.assign({
     usdot:'4086767',mc:'1560709',order:job.id,vanNo:'',crew:'',interliner:'',
     agreedPickup:d,actualPickup:d,firstAvail:e.firstDelivery||'',deliverNoLater:'',
@@ -749,9 +758,9 @@ function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);cons
     dName:e.customer||'',dStreet:splitStreet(e.dAddr),dCSZ:splitCSZ(e.dAddr),dPhone:e.phone||'',dPhone2:'',
     enrouteName:'',enroutePhone:'',
     valuation:/Full Value/i.test(e.valuation||'')?'full':'waiver',declaredValue:'',fvpEstimate:'',
-    chTransport:(e.basic!=null?e.basic:''),fuelPct:(e.fuelPct||'15'),chFuel:(function(){const base=(e.volume&&e.rate)?(+String(e.volume).replace(/,/g,'')*+e.rate):(e.basic!=null?+e.basic:0);const pct=parseFloat(e.fuelPct||'15')||0;return base&&pct?+(base*pct/100).toFixed(2):'';})(),chPacking:'',chBulky:bulkyFeeSum(e),
+    chTransport:(e.basic!=null?e.basic:''),fuelPct:(e.fuelPct||'15'),chFuel:(_fuel||''),chPacking:'',chBulky:bulkyFeeSum(e),
     chStairs:'',chElevator:'',chLongCarry:'',chShuttle:'',chSIT:'',chStgHandling:'',chExtraLabor:'',chExtraStop:'',chWaiting:'',
-    chConvPGS:'',chRedelivery:'',chBinding:'',chOther:'',chTotal:(e.total!=null?e.total:''),
+    chConvPGS:'',chRedelivery:'',chBinding:'',chOther:(_other||''),chTotal:(e.total!=null?e.total:''),
     locStairs:'—',locElevator:'—',locLongCarry:'—',locShuttle:'—',locSIT:'—',locStgHandling:'—',locExtraLabor:'—',locExtraStop:'—',locWaiting:'—',
     payDiscount:'',payDeposit:(e.deposit!=null?e.deposit:''),payOrigin:'',payBalanceDest:'',payPriceAdj:'',payDestination:'',payBalance30:'',method:'',
     dedicatedTruck:'',expeditedDate:'',stairsFlights:'',extraLaborHrs:'',
@@ -762,7 +771,7 @@ function openBOL(id){renderBOL(id);}
 function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e=job.est||{};const p=payments(e);const s=_bolSeed=bolSeed(job);
   try{if(navigator.geolocation)navigator.geolocation.getCurrentPosition(g=>{window._geo={lat:+g.coords.latitude.toFixed(5),lng:+g.coords.longitude.toFixed(5),at:now()};},()=>{},{timeout:6000});}catch(_){}
   const dw=v=>['Private Home','Apartment','Building Elevator','Walk-Up','Storage'].map(o=>`<option ${v===o?'selected':''}>${o}</option>`).join('');
-  const A=(id,v)=>`<input id="${id}" class="mny" value="${(v!==''&&v!=null)?esc(v):''}" placeholder="$">`;
+  const A=(id,v)=>`<input id="${id}" class="mny" value="${(v!==''&&v!=null)?esc(v):''}" placeholder="$" oninput="recalcTotal()">`;
   const L=(id,v)=>`<select id="${id}" class="locsel">${['—','Origin','Destination','Both'].map(o=>`<option ${(v||'—')===o?'selected':''}>${o}</option>`).join('')}</select>`;
   const chr=(lbl,aid,av)=>`<div class="chrow"><span>${lbl}</span>${A(aid,av)}</div>`;
   const chrL=(lbl,lid,lv,aid,av)=>`<div class="chrow"><span>${lbl}</span><span class="ce">${L(lid,lv)}${A(aid,av)}</span></div>`;
@@ -842,8 +851,9 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      ${chr('Convenience fee + PGS delivery','b_chConvPGS',s.chConvPGS)}
      ${chr('Redelivery','b_chRedelivery',s.chRedelivery)}
      ${chr('Binding estimate fee','b_chBinding',s.chBinding)}
-     ${chr('Other','b_chOther',s.chOther)}</div>
-     <div class="chrow tot"><span>TOTAL APPLICABLE CHARGES</span><input id="b_chTotal" class="mny big" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" oninput="recalcBalance()"></div>
+     ${chr('Other / remaining estimate charges','b_chOther',s.chOther)}</div>
+     <p class="muted" style="margin:6px 0 2px;font-size:11.5px">The total auto-adds every line above so it always matches. Any estimate amount not itemized sits in <b>Other</b> — move it into the right line if you know what it is.</p>
+     <div class="chrow tot"><span>TOTAL APPLICABLE CHARGES <span class="muted">(auto)</span></span><input id="b_chTotal" class="mny big" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" readonly style="background:#eef3f9;font-weight:800"></div>
      <div class="subh">Special delivery (AS-22) <span class="tag tag-b">EXTRA</span></div>
      <div class="twocol tb"><div class="f"><label class="fl">Dedicated truck — cu ft ordered</label><input id="b_dedicatedTruck" value="${esc(s.dedicatedTruck)}"></div>
        <div class="f"><label class="fl">Expedited — deliver on/before</label><input type="date" id="b_expeditedDate" value="${esc(s.expeditedDate)}"></div>
@@ -894,13 +904,18 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      <p class="muted" id="sigCount2" style="margin:0 0 10px"></p>
      <div class="btnrow"><button onclick="generateBOL('${job.id}')">✅ Generate signed Bill of Lading</button><button class="ghost" onclick="openFmJob('${job.id}')">Cancel</button></div>
      <p class="muted" style="margin-top:8px">All section signatures, timestamps, device &amp; (if allowed) location are captured for the audit trail. Delivery acknowledgements are signed at delivery.</p></div>`;
-  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');window._sigState={ack:{}};fillSigBlocks();recalcFuel();recalcBalance();},30);
+  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');window._sigState={ack:{}};fillSigBlocks();recalcTotal();},30);
   window.scrollTo(0,0);
 }
 function recalcFuel(){const g=id=>{const el=document.getElementById(id);return el?(num(el.value)||0):0;};
   const f=document.getElementById('b_chFuel');if(!f)return;
   const base=g('b_chTransport'),pct=g('b_fuelPct');
   if(base>0&&pct>0)f.value=(Math.round(base*pct)/100).toFixed(2);
+  recalcTotal();}
+function recalcTotal(){const g=id=>{const el=document.getElementById(id);return el?(num(el.value)||0):0;};
+  const keys=['b_chTransport','b_chFuel','b_chPacking','b_chBulky','b_chStairs','b_chElevator','b_chLongCarry','b_chShuttle','b_chSIT','b_chStgHandling','b_chExtraLabor','b_chExtraStop','b_chWaiting','b_chConvPGS','b_chRedelivery','b_chBinding','b_chOther'];
+  const sum=keys.reduce((t,k)=>t+g(k),0);
+  const ct=document.getElementById('b_chTotal');if(ct)ct.value=(Math.round(sum*100)/100).toFixed(2);
   recalcBalance();}
 function recalcBalance(){const g=id=>{const el=document.getElementById(id);return el?(num(el.value)||0):0;};
   const ct=document.getElementById('b_chTotal'),ref=document.getElementById('b_payTotalRef');if(ct&&ref)ref.value=ct.value;
@@ -1013,10 +1028,11 @@ function backendPayload(job){const e=job.est||{},b=job.bol||{};const oc=parseCSZ
     chStairs:b.chStairs,locStairs:b.locStairs,chElevator:b.chElevator,locElevator:b.locElevator,chLongCarry:b.chLongCarry,locLongCarry:b.locLongCarry,
     chShuttle:b.chShuttle,locShuttle:b.locShuttle,chSIT:b.chSIT,locSIT:b.locSIT,chStgHandling:b.chStgHandling,locStgHandling:b.locStgHandling,
     chExtraLabor:b.chExtraLabor,locExtraLabor:b.locExtraLabor,chExtraStop:b.chExtraStop,locExtraStop:b.locExtraStop,chWaiting:b.chWaiting,locWaiting:b.locWaiting,
-    chConvPGS:b.chConvPGS,chRedelivery:b.chRedelivery,chBinding:b.chBinding,chOther:b.chOther,chAccTotal:chAccTotal?chAccTotal.toFixed(2):'',
+    chRedelivery:b.chRedelivery,chAccTotal:chAccTotal?chAccTotal.toFixed(2):'',
+    chOther:((num(b.chOther)||0)+(num(b.chConvPGS)||0)+(num(b.chBinding)||0))?((num(b.chOther)||0)+(num(b.chConvPGS)||0)+(num(b.chBinding)||0)).toFixed(2):'',
     chTotal:b.chTotal,payDiscount:b.payDiscount,payDeposit:b.payDeposit,payOrigin:b.payOrigin,payBalanceDest:b.payBalanceDest,payPriceAdj:b.payPriceAdj,payDestination:b.payDestination,payBalance30:b.payBalance30,
     dedicatedTruck:b.dedicatedTruck,expeditedDate:b.expeditedDate,fullPack:b.fullPack,materialsNote:b.materialsNote,storageStart:b.storageStart,storageEnd:b.storageEnd,walkupFlights:b.walkupFlights,dwellingD:b.dwellingD,
-    ttAccess:b.ttAccess,storage:b.storage,dwellingO:b.dwellingO,volume:e.volume,packTotal:b.packTotal,
+    ttAccess:b.ttAccess,storage:b.storage,dwellingO:b.dwellingO,volume:e.volume,rate:e.rate,packTotal:b.packTotal,
     sigs:{valuation:sg('valuation','cust'),documents:sg('documents','cust'),bolReceipt_cust:sg('bolReceipt','cust'),bolReceipt_carrier:sg('bolReceipt','carrier'),
       pickup_cust:sg('pickup','cust'),pickup_carrier:sg('pickup','carrier'),accessorial_cust:sg('accessorial','cust'),accessorial_carrier:sg('accessorial','carrier'),
       ldf:sg('ldf','cust'),pms_cust:sg('pms','cust'),pms_carrier:sg('pms','carrier')}};}
