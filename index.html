@@ -97,6 +97,18 @@
   .opt.sel{border-color:var(--blue);background:#f2f8fe;box-shadow:inset 0 0 0 1px var(--blue)}
   .opt input{width:auto;margin-top:3px} .opt .ot{font-weight:700} .opt .od{font-size:12.5px;color:var(--muted);margin-top:2px}
   .req{color:var(--bad);font-weight:700}
+  /* field tiers: yellow=auto from estimate · blue=extra if ordered · red=required by foreman */
+  .ty{border-left:3px solid #E0A800;padding-left:9px}
+  .tb{border-left:3px solid #2563eb;padding-left:9px}
+  .tr{border-left:3px solid #d23b3b;padding-left:9px}
+  .tag{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.3px;padding:1px 5px;border-radius:5px;vertical-align:middle;margin-left:6px}
+  .tag-y{background:#fdf3d6;color:#946a00}
+  .tag-b{background:#e6eefc;color:#1d4ed8}
+  .tag-r{background:#fbe3e3;color:#c0392b}
+  .tierkey{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:#555;background:#fafafa;border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:12px}
+  .tierkey span{display:inline-flex;align-items:center;gap:6px}
+  .tierkey i{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .miss{outline:2px solid var(--bad)!important;outline-offset:1px;background:#fff6f6}
   .twocol{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 16px} @media(max-width:640px){.twocol{grid-template-columns:1fr}}
   .chk{display:flex;gap:9px;align-items:flex-start;font-size:14px;margin:7px 0} .chk input{width:auto;margin-top:3px}
   .padwrap{position:relative;margin-top:4px}
@@ -757,7 +769,12 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
   $('#app').innerHTML=`<div class="modebar">FOREMAN PORTAL · ON-SITE BILL OF LADING</div>
   <div class="card fmwrap"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="pill p-info">BOL</span><h2 style="margin:0">Bill of Lading — Job ${job.id}</h2>
     <button class="ghost sm right" onclick="openFmJob('${job.id}')">← Back to job</button></div>
-    <p class="sub" style="margin-top:6px">Every field is pre-filled from the estimate as if nothing changed — confirm or edit each section, and the customer signs that section before moving on. <span class="req">*</span> = required.</p>
+    <p class="sub" style="margin-top:6px">Confirm or edit each section, and the customer signs that section before moving on.</p>
+    <div class="tierkey">
+      <span><i style="background:#E0A800"></i> <b>Auto from estimate</b> — already filled, just confirm</span>
+      <span><i style="background:#2563eb"></i> <b>Extra service</b> — fill only if ordered</span>
+      <span><i style="background:#d23b3b"></i> <b>Required</b> — foreman must fill <span class="req">*</span></span>
+    </div>
 
    <div class="bolsec" style="border-color:var(--teal)"><h4><span class="step" style="background:var(--teal)">✍️</span> Signature setup</h4>
      <div class="ackbox">Capture each person's signature once here. As you complete each section below, tap <b>Sign</b> on that section's acknowledgement to apply it (with its own timestamp) — just like the paper packet. <span id="sigCount" style="font-weight:700;color:var(--teal)"></span></div>
@@ -775,11 +792,11 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
        <div class="f"><label class="fl">Crew size</label><input id="b_crew" value="${esc(s.crew)}" placeholder="e.g. 3"></div>
        <div class="f"><label class="fl">Interlining carrier / agent</label><input id="b_interliner" value="${esc(s.interliner)}" placeholder="if any"></div>
        <div class="f"><label class="fl">Agreed pick-up date</label><input type="date" id="b_agreedPickup" value="${esc(s.agreedPickup)}"></div>
-       <div class="f"><label class="fl">Actual pick-up date <span class="req">*</span></label><input type="date" id="b_actualPickup" value="${esc(s.actualPickup)}"></div>
-       <div class="f"><label class="fl">1st available delivery</label><input type="date" id="b_firstAvail" value="${esc(s.firstAvail)}"></div>
-       <div class="f"><label class="fl">Delivery no later than</label><input type="date" id="b_deliverNoLater" value="${esc(s.deliverNoLater)}"></div></div></div>
+       <div class="f tr"><label class="fl">Actual pick-up date <span class="req">*</span><span class="tag tag-r">REQUIRED</span></label><input type="date" id="b_actualPickup" value="${esc(s.actualPickup)}"></div>
+       <div class="f tr"><label class="fl">1st available delivery <span class="req">*</span><span class="tag tag-r">REQUIRED</span></label><input type="date" id="b_firstAvail" value="${esc(s.firstAvail)}"></div>
+       <div class="f tr"><label class="fl">Delivery no later than <span class="req">*</span><span class="tag tag-r">REQUIRED</span></label><input type="date" id="b_deliverNoLater" value="${esc(s.deliverNoLater)}"></div></div></div>
 
-   <div class="bolsec"><h4><span class="step">2</span> Origin information</h4>
+   <div class="bolsec"><h4><span class="step">2</span> Origin information <span class="tag tag-y">AUTO</span></h4>
      <div class="twocol">
        <div class="f"><label class="fl">Customer name</label><input id="b_oName" value="${esc(s.oName)}"></div>
        <div class="f"><label class="fl">Primary phone</label><input id="b_oPhone" value="${esc(s.oPhone)}"></div>
@@ -787,7 +804,7 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
        <div class="f"><label class="fl">City, State ZIP</label><input id="b_oCSZ" value="${esc(s.oCSZ)}"></div>
        <div class="f"><label class="fl">Secondary phone</label><input id="b_oPhone2" value="${esc(s.oPhone2)}"></div></div></div>
 
-   <div class="bolsec"><h4><span class="step">3</span> Destination information</h4>
+   <div class="bolsec"><h4><span class="step">3</span> Destination information <span class="tag tag-y">AUTO</span></h4>
      <div class="twocol">
        <div class="f"><label class="fl">Customer name</label><input id="b_dName" value="${esc(s.dName)}"></div>
        <div class="f"><label class="fl">Primary phone</label><input id="b_dPhone" value="${esc(s.dPhone)}"></div>
@@ -807,9 +824,10 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
    <div class="sigblock" id="sig_valuation"></div>
 
    <div class="bolsec"><h4><span class="step">5</span> Services &amp; charges</h4>
-     <p class="muted" style="margin:-4px 0 6px">Pre-filled from the estimate; enter any accessorials performed on site (with location).</p>
+     <div class="ty" style="margin-bottom:8px"><div class="muted" style="margin:0 0 4px"><span class="tag tag-y">AUTO</span> Base charges — from the estimate</div>
      <div class="chrow"><span>Transportation (${e.volume} cf @ $${e.rate})</span><input id="b_chTransport" class="mny" value="${(s.chTransport!==''&&s.chTransport!=null)?esc(s.chTransport):''}" oninput="recalcFuel()" placeholder="$"></div>
-     <div class="chrow"><span>Fuel surcharge (<input id="b_fuelPct" value="${esc(s.fuelPct)}" oninput="recalcFuel()" style="width:46px;padding:4px 6px;text-align:right;display:inline-block">% — auto)</span>${A('b_chFuel',s.chFuel)}</div>
+     <div class="chrow"><span>Fuel surcharge (<input id="b_fuelPct" value="${esc(s.fuelPct)}" oninput="recalcFuel()" style="width:46px;padding:4px 6px;text-align:right;display:inline-block">% — auto)</span>${A('b_chFuel',s.chFuel)}</div></div>
+     <div class="tb"><div class="muted" style="margin:0 0 4px"><span class="tag tag-b">EXTRA</span> Accessorials — fill only the services actually ordered/performed</div>
      ${chr('Packing labor &amp; materials','b_chPacking',s.chPacking)}
      ${chr('Bulky articles','b_chBulky',s.chBulky)}
      ${chrL('Stairs','b_locStairs',s.locStairs,'b_chStairs',s.chStairs)}
@@ -824,10 +842,10 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      ${chr('Convenience fee + PGS delivery','b_chConvPGS',s.chConvPGS)}
      ${chr('Redelivery','b_chRedelivery',s.chRedelivery)}
      ${chr('Binding estimate fee','b_chBinding',s.chBinding)}
-     ${chr('Other','b_chOther',s.chOther)}
+     ${chr('Other','b_chOther',s.chOther)}</div>
      <div class="chrow tot"><span>TOTAL APPLICABLE CHARGES</span><input id="b_chTotal" class="mny big" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" oninput="recalcBalance()"></div>
-     <div class="subh">Special delivery (AS-22)</div>
-     <div class="twocol"><div class="f"><label class="fl">Dedicated truck — cu ft ordered</label><input id="b_dedicatedTruck" value="${esc(s.dedicatedTruck)}"></div>
+     <div class="subh">Special delivery (AS-22) <span class="tag tag-b">EXTRA</span></div>
+     <div class="twocol tb"><div class="f"><label class="fl">Dedicated truck — cu ft ordered</label><input id="b_dedicatedTruck" value="${esc(s.dedicatedTruck)}"></div>
        <div class="f"><label class="fl">Expedited — deliver on/before</label><input type="date" id="b_expeditedDate" value="${esc(s.expeditedDate)}"></div>
        <div class="f"><label class="fl">Stair flights (beyond 1st)</label><input id="b_stairsFlights" value="${esc(s.stairsFlights)}"></div>
        <div class="f"><label class="fl">Extra labor hours</label><input id="b_extraLaborHrs" value="${esc(s.extraLaborHrs)}"></div></div></div>
@@ -838,7 +856,7 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      ${chr('Tariff discounts','b_payDiscount',s.payDiscount)}
      <div class="chrow"><span>Total applicable charges</span><input id="b_payTotalRef" class="mny" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" readonly style="background:#f3f6fb"></div>
      <div class="chrow"><span>Prepaid deposit (paid at booking)</span><input id="b_payDeposit" class="mny" value="${(s.payDeposit!==''&&s.payDeposit!=null)?esc(s.payDeposit):''}" oninput="recalcBalance()" placeholder="$"></div>
-     <div class="chrow"><span>💵 Origin payment collected (at pickup)</span><input id="b_payOrigin" class="mny" value="${(s.payOrigin!==''&&s.payOrigin!=null)?esc(s.payOrigin):''}" oninput="recalcBalance()" placeholder="$"></div>
+     <div class="chrow tr"><span>💵 Origin payment collected (at pickup) <span class="req">*</span><span class="tag tag-r">REQUIRED</span></span><input id="b_payOrigin" class="mny" value="${(s.payOrigin!==''&&s.payOrigin!=null)?esc(s.payOrigin):''}" oninput="recalcBalance()" placeholder="$"></div>
      <div class="chrow"><span><b>Balance due at delivery</b> <span class="muted">(auto)</span></span><input id="b_payBalanceDest" class="mny" value="${(s.payBalanceDest!==''&&s.payBalanceDest!=null)?esc(s.payBalanceDest):''}" readonly style="background:#e7f6ef;font-weight:800;color:#0f6e56"></div>
      ${chr('Price adjustments','b_payPriceAdj',s.payPriceAdj)}
      ${chr('Destination payment','b_payDestination',s.payDestination)}
@@ -848,7 +866,8 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
    <div class="sigblock" id="sig_bolReceipt"></div>
    <div class="sigblock" id="sig_pickup"></div>
 
-   <div class="bolsec"><h4><span class="step">7</span> Long-distance form (LDF-08)</h4>
+   <div class="bolsec tr"><h4><span class="step">7</span> Long-distance form (LDF-08) — access info <span class="tag tag-r">REQUIRED</span></h4>
+     <p class="muted" style="margin:-4px 0 8px">Confirm the access conditions at both ends — these drive shuttle/long-carry charges and the crew plan.</p>
      <label class="chk"><input type="checkbox" id="b_storage" ${s.storage?'checked':''}> Storage in transit needed</label>
      <div class="twocol"><div class="f"><label class="fl">Storage start</label><input type="date" id="b_storageStart" value="${esc(s.storageStart)}"></div>
        <div class="f"><label class="fl">Storage end</label><input type="date" id="b_storageEnd" value="${esc(s.storageEnd)}"></div></div>
@@ -860,7 +879,8 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      <div class="f"><label class="fl">If yes, explain</label><input id="b_accessExplain" value="${esc(s.accessExplain)}"></div></div>
    <div class="sigblock" id="sig_ldf"></div>
 
-   <div class="bolsec"><h4><span class="step">8</span> Packing &amp; bulky (PMS-19)</h4>
+   <div class="bolsec"><h4><span class="step">8</span> Packing &amp; bulky (PMS-19) <span class="tag tag-b">EXTRA</span></h4>
+     <p class="muted" style="margin:-4px 0 8px">Fill only if packing/materials were provided.</p>
      <label class="chk"><input type="checkbox" id="b_fullPack" ${s.fullPack?'checked':''}> Full packing performed</label>
      ${bulkyList(e).length?`<div class="muted" style="margin:6px 0;color:#7a5200">⚠ Bulky from inventory: ${esc(bulkyList(e).join(' · '))}</div>`:''}
      <div class="twocol"><div class="f"><label class="fl">Materials / notes</label><input id="b_materialsNote" value="${esc(s.materialsNote)}" placeholder="e.g. 20 dish packs, 4 wardrobe boxes, TV cartons"></div>
@@ -926,10 +946,23 @@ function padData(id){const c=document.getElementById(id);return c&&c.dataset.dra
 function generateBOL(id){const v=s=>{const el=document.getElementById(s);return el?el.value.trim():'';};const ck=s=>{const el=document.getElementById(s);return!!(el&&el.checked);};
   const val=(document.querySelector('input[name=b_val]:checked')||{}).value||'';
   const st=window._sigState||{ack:{}};const miss=[];
-  if(!v('b_actualPickup'))miss.push('actual pick-up date');if(!val)miss.push('valuation option');if(!ck('b_consent'))miss.push('customer consent');
+  // clear any prior highlight
+  document.querySelectorAll('.miss').forEach(el=>el.classList.remove('miss'));
+  const need=(id,label)=>{if(!v(id)){miss.push(label);const el=document.getElementById(id);if(el)el.classList.add('miss');}};
+  // RED required fields (foreman must fill)
+  need('b_actualPickup','actual pick-up date');
+  need('b_firstAvail','1st available delivery date');
+  need('b_deliverNoLater','delivery no later than');
+  need('b_payOrigin','origin payment collected');
+  need('b_method','payment method');
+  // conditional: walk-up flights when a dwelling is Walk-Up
+  if((v('b_dwellingO')==='Walk-Up'||v('b_dwellingD')==='Walk-Up'))need('b_walkupFlights','# of walk-up flights');
+  // conditional: storage dates when storage-in-transit is checked
+  if(ck('b_storage')){need('b_storageStart','storage start date');need('b_storageEnd','storage end date');}
+  if(!val)miss.push('valuation option');if(!ck('b_consent'))miss.push('customer consent');
   let sigMiss=0;SIGPTS.forEach(pt=>pt.who.forEach(w=>{if(!(st.ack[pt.key]&&st.ack[pt.key][w]))sigMiss++;}));
   if(sigMiss)miss.push(sigMiss+' signature(s) still needed');
-  if(miss.length){alert('Please complete: '+miss.join(', '));return;}
+  if(miss.length){const f=document.querySelector('.miss');if(f)f.scrollIntoView({behavior:'smooth',block:'center'});alert('Please complete the required fields:\n• '+miss.join('\n• '));return;}
   const cust=padData('b_custSig'),fore=padData('b_foreSig');
   const job=getJob(id);if(!job)return;
   const bol=Object.assign({},_bolSeed||{},{
@@ -969,12 +1002,20 @@ const BACKEND='https://rushmore-bol-backend.onrender.com';
 function parseCSZ(s){s=String(s||'');const i=s.lastIndexOf(',');const city=i>=0?s.slice(0,i).trim():s.trim();const rest=(i>=0?s.slice(i+1):'').trim().split(/\s+/);return {city:city,state:rest[0]||'',zip:rest[1]||''};}
 function backendPayload(job){const e=job.est||{},b=job.bol||{};const oc=parseCSZ(b.oCSZ),dc=parseCSZ(b.dCSZ);
   const sg=(k,w)=>{const a=(b.sigs||{})[k];return a&&a[w]?a[w].img:'';};
+  // sum the filled accessorial charges for the AS-22 total
+  const accKeys=['chPacking','chBulky','chStairs','chElevator','chLongCarry','chShuttle','chSIT','chStgHandling','chExtraLabor','chExtraStop','chWaiting','chConvPGS','chRedelivery','chBinding','chOther'];
+  const chAccTotal=accKeys.reduce((t,k)=>t+(num(b[k])||0),0);
   return {van:b.vanNo,order:b.order||job.id,agreedPickup:b.agreedPickup,actualPickup:b.actualPickup,firstAvail:b.firstAvail,deliverNoLater:b.deliverNoLater,
     oName:b.oName,oStreet:b.oStreet,oCity:oc.city,oState:oc.state,oZip:oc.zip,oPhone:b.oPhone,
     dName:b.dName,dStreet:b.dStreet,dCity:dc.city,dState:dc.state,dZip:dc.zip,dPhone:b.dPhone,
     enrouteName:b.enrouteName,enroutePhone:b.enroutePhone,valuation:b.valuation,
-    chTransport:b.chTransport,fuelPct:b.fuelPct,chFuel:b.chFuel,chBulky:b.chBulky,chStairs:b.chStairs,locStairs:b.locStairs,
+    chTransport:b.chTransport,fuelPct:b.fuelPct,chFuel:b.chFuel,chPacking:b.chPacking,chBulky:b.chBulky,
+    chStairs:b.chStairs,locStairs:b.locStairs,chElevator:b.chElevator,locElevator:b.locElevator,chLongCarry:b.chLongCarry,locLongCarry:b.locLongCarry,
+    chShuttle:b.chShuttle,locShuttle:b.locShuttle,chSIT:b.chSIT,locSIT:b.locSIT,chStgHandling:b.chStgHandling,locStgHandling:b.locStgHandling,
+    chExtraLabor:b.chExtraLabor,locExtraLabor:b.locExtraLabor,chExtraStop:b.chExtraStop,locExtraStop:b.locExtraStop,chWaiting:b.chWaiting,locWaiting:b.locWaiting,
+    chConvPGS:b.chConvPGS,chRedelivery:b.chRedelivery,chBinding:b.chBinding,chOther:b.chOther,chAccTotal:chAccTotal?chAccTotal.toFixed(2):'',
     chTotal:b.chTotal,payDiscount:b.payDiscount,payDeposit:b.payDeposit,payOrigin:b.payOrigin,payBalanceDest:b.payBalanceDest,payPriceAdj:b.payPriceAdj,payDestination:b.payDestination,payBalance30:b.payBalance30,
+    dedicatedTruck:b.dedicatedTruck,expeditedDate:b.expeditedDate,fullPack:b.fullPack,materialsNote:b.materialsNote,storageStart:b.storageStart,storageEnd:b.storageEnd,walkupFlights:b.walkupFlights,dwellingD:b.dwellingD,
     ttAccess:b.ttAccess,storage:b.storage,dwellingO:b.dwellingO,volume:e.volume,packTotal:b.packTotal,
     sigs:{valuation:sg('valuation','cust'),documents:sg('documents','cust'),bolReceipt_cust:sg('bolReceipt','cust'),bolReceipt_carrier:sg('bolReceipt','carrier'),
       pickup_cust:sg('pickup','cust'),pickup_carrier:sg('pickup','carrier'),accessorial_cust:sg('accessorial','cust'),accessorial_carrier:sg('accessorial','carrier'),
@@ -1054,12 +1095,12 @@ function initApp(){
   setInterval(autoPoll,5*60*1000);
 }
 function gate(){
-  if(localStorage.getItem('rvl_pin')==='2020'){initApp();return;}
+  if(localStorage.getItem('rvl_pin')==='2026'){initApp();return;}
   const ov=document.createElement('div');ov.id='pinGate';
   ov.innerHTML='<div class="pinbox"><div class="pinlogo">Rushmore Van Lines</div><div class="pinsub">Enter access PIN to continue</div><input id="pinIn" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="PIN"><button id="pinBtn">Enter</button><div id="pinErr" class="pinerr"></div></div>';
   document.body.appendChild(ov);
   const inp=ov.querySelector('#pinIn'),btn=ov.querySelector('#pinBtn'),err=ov.querySelector('#pinErr');
-  function tryPin(){if(inp.value.trim()==='2026'){localStorage.setItem('rvl_pin','2020');ov.remove();initApp();}else{err.textContent='Incorrect PIN — try again';inp.value='';inp.focus();}}
+  function tryPin(){if(inp.value.trim()==='2026'){localStorage.setItem('rvl_pin','2026');ov.remove();initApp();}else{err.textContent='Incorrect PIN — try again';inp.value='';inp.focus();}}
   btn.onclick=tryPin;inp.addEventListener('keydown',e=>{if(e.key==='Enter')tryPin();});
   setTimeout(()=>inp.focus(),60);
 }
