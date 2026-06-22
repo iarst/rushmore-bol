@@ -761,8 +761,8 @@ function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);cons
     locStairs:'—',locElevator:'—',locLongCarry:'—',locShuttle:'—',locSIT:'—',locStgHandling:'—',locExtraLabor:'—',locExtraStop:'—',locWaiting:'—',
     payDiscount:'',payDeposit:(e.deposit!=null?e.deposit:''),payOrigin:'',payBalanceDest:'',payPriceAdj:'',payDestination:'',payBalance30:'',method:'',
     dedicatedTruck:'',expeditedDate:'',stairsFlights:'',extraLaborHrs:'',
-    fullPack:!!e.fullPack,materialsNote:'',packTotal:'',
-    storage:false,storageStart:'',storageEnd:'',ttAccess:true,dwellingO:e.oType||'Private Home',dwellingD:e.dType||'Private Home',walkupFlights:'',accessDenied:false,accessExplain:'',
+    fullPackChoice:(e.fullPack?'Yes':'No'),packRateCf:'',materialsNote:'',packTotal:'',
+    storageChoice:'No',storageStart:'',storageEnd:'',ttAccessChoice:'Tractor-trailer access available',dwellingO:e.oType||'Private Home',dwellingD:e.dType||'Private Home',walkupFlights:'',accessDenied:false,accessExplain:'',
     exceptions:'',consent:false,custSig:'',foreSig:''},b);}
 function openBOL(id){renderBOL(id);}
 function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e=job.est||{};const p=payments(e);const s=_bolSeed=bolSeed(job);
@@ -794,13 +794,11 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
        <div class="f"><label class="fl">US DOT #</label><input id="b_usdot" value="${esc(s.usdot)}"></div>
        <div class="f"><label class="fl">ICC / MC #</label><input id="b_mc" value="${esc(s.mc)}"></div>
        <div class="f"><label class="fl">Order #</label><input id="b_order" value="${esc(s.order)}" readonly></div>
-       <div class="f"><label class="fl">Van #</label><input id="b_van" value="${esc(s.vanNo)}" placeholder="e.g. RVL-204"></div>
-       <div class="f"><label class="fl">Crew size</label><input id="b_crew" value="${esc(s.crew)}" placeholder="e.g. 3"></div>
        <div class="f"><label class="fl">Interlining carrier / agent</label><input id="b_interliner" value="${esc(s.interliner)}" placeholder="if any"></div>
        <div class="f"><label class="fl">Agreed pick-up date</label><input type="date" id="b_agreedPickup" value="${esc(s.agreedPickup)}"></div>
        <div class="f tr"><label class="fl">Actual pick-up date <span class="req">*</span><span class="tag tag-r">REQUIRED</span></label><input type="date" id="b_actualPickup" value="${esc(s.actualPickup)}"></div>
        <div class="f tr"><label class="fl">1st available delivery <span class="req">*</span><span class="tag tag-r">REQUIRED</span></label><input type="date" id="b_firstAvail" value="${esc(s.firstAvail)}"></div>
-       <div class="f tr"><label class="fl">Delivery no later than <span class="req">*</span><span class="tag tag-r">REQUIRED</span></label><input type="date" id="b_deliverNoLater" value="${esc(s.deliverNoLater)}"></div></div></div>
+       <div class="f"><label class="fl">Delivery no later than</label><input type="date" id="b_deliverNoLater" value="${esc(s.deliverNoLater)}"></div></div></div>
 
    <div class="bolsec"><h4><span class="step">2</span> Origin information <span class="tag tag-y">AUTO</span></h4>
      <div class="twocol">
@@ -847,13 +845,11 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      ${chrL('Waiting time / overnight','b_locWaiting',s.locWaiting,'b_chWaiting',s.chWaiting)}
      ${chr('Convenience fee + PGS delivery','b_chConvPGS',s.chConvPGS)}
      ${chr('Redelivery','b_chRedelivery',s.chRedelivery)}
-     ${chr('Binding estimate fee','b_chBinding',s.chBinding)}
      <div class="chrow"><span>Other — <input id="b_chOtherDesc" value="${esc(s.chOtherDesc)}" placeholder="describe (e.g. Binding estimate fee)" style="width:230px;padding:4px 6px"></span>${A('b_chOther',s.chOther)}</div></div>
      <p class="muted" style="margin:6px 0 2px;font-size:11.5px">The total auto-adds every line above so it always matches. Any estimate amount not itemized sits in <b>Other</b> — move it into the right line if you know what it is.</p>
      <div class="chrow tot"><span>TOTAL APPLICABLE CHARGES <span class="muted">(auto)</span></span><input id="b_chTotal" class="mny big" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" readonly style="background:#eef3f9;font-weight:800"></div>
      <div class="subh">Special delivery (AS-22) <span class="tag tag-b">EXTRA</span></div>
-     <div class="twocol tb"><div class="f"><label class="fl">Dedicated truck — cu ft ordered</label><input id="b_dedicatedTruck" value="${esc(s.dedicatedTruck)}"></div>
-       <div class="f"><label class="fl">Expedited — deliver on/before</label><input type="date" id="b_expeditedDate" value="${esc(s.expeditedDate)}"></div>
+     <div class="twocol tb"><div class="f"><label class="fl">Expedited — deliver on/before</label><input type="date" id="b_expeditedDate" value="${esc(s.expeditedDate)}"></div>
        <div class="f"><label class="fl">Stair flights (beyond 1st)</label><input id="b_stairsFlights" value="${esc(s.stairsFlights)}"></div>
        <div class="f"><label class="fl">Extra labor hours</label><input id="b_extraLaborHrs" value="${esc(s.extraLaborHrs)}"></div></div></div>
    <div class="sigblock" id="sig_accessorial"></div>
@@ -868,17 +864,17 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      ${chr('Price adjustments','b_payPriceAdj',s.payPriceAdj)}
      ${chr('Destination payment','b_payDestination',s.payDestination)}
      ${chr('Balance due to carrier within 30 days','b_payBalance30',s.payBalance30)}
-     <div class="f" style="margin-top:8px"><label class="fl">Payment method</label><select id="b_method"><option value="">Select…</option>${['Credit card','Cashiers check','Personal check','Postal money order','Cash','App'].map(o=>`<option ${s.method===o?'selected':''}>${o}</option>`).join('')}</select></div></div>
+     <div class="f tr" style="margin-top:8px"><label class="fl">Payment method <span class="req">*</span><span class="tag tag-r">REQUIRED</span></label><select id="b_method"><option value="">Select…</option>${['Credit card','Cashiers check','Personal check','Postal money order','Cash','App'].map(o=>`<option ${s.method===o?'selected':''}>${o}</option>`).join('')}</select></div></div>
    <div class="sigblock" id="sig_documents"></div>
    <div class="sigblock" id="sig_bolReceipt"></div>
    <div class="sigblock" id="sig_pickup"></div>
 
    <div class="bolsec tr"><h4><span class="step">7</span> Long-distance form (LDF-08) — access info <span class="tag tag-r">REQUIRED</span></h4>
      <p class="muted" style="margin:-4px 0 8px">Confirm the access conditions at both ends — these drive shuttle/long-carry charges and the crew plan.</p>
-     <label class="chk"><input type="checkbox" id="b_storage" ${s.storage?'checked':''}> Storage in transit needed</label>
-     <div class="twocol"><div class="f"><label class="fl">Storage start</label><input type="date" id="b_storageStart" value="${esc(s.storageStart)}"></div>
-       <div class="f"><label class="fl">Storage end</label><input type="date" id="b_storageEnd" value="${esc(s.storageEnd)}"></div></div>
-     <label class="chk" style="margin-top:8px"><input type="checkbox" id="b_ttAccess" ${s.ttAccess?'checked':''}> Tractor-trailer (72 ft) access available (uncheck if shuttle needed)</label>
+     <div class="f"><label class="fl">Storage in transit needed? <span class="req">*</span></label><select id="b_storage" onchange="toggleStorage()"><option value="">Select…</option><option ${s.storageChoice==='Yes'?'selected':''}>Yes</option><option ${s.storageChoice==='No'?'selected':''}>No</option></select></div>
+     <div class="twocol" id="storageDates" style="display:none"><div class="f"><label class="fl">Storage start <span class="req">*</span></label><input type="date" id="b_storageStart" value="${esc(s.storageStart)}"></div>
+       <div class="f"><label class="fl">Storage end <span class="req">*</span></label><input type="date" id="b_storageEnd" value="${esc(s.storageEnd)}"></div></div>
+     <div class="f" style="margin-top:8px"><label class="fl">Access at delivery <span class="req">*</span></label><select id="b_ttAccess"><option value="">Select…</option><option ${s.ttAccessChoice==='Tractor-trailer access available'?'selected':''}>Tractor-trailer access available</option><option ${s.ttAccessChoice==='Shuttle service needed'?'selected':''}>Shuttle service needed</option></select></div>
      <div class="twocol"><div class="f"><label class="fl">Dwelling — origin</label><select id="b_dwellingO">${dw(s.dwellingO)}</select></div>
        <div class="f"><label class="fl">Dwelling — destination</label><select id="b_dwellingD">${dw(s.dwellingD)}</select></div>
        <div class="f"><label class="fl">If walk-up, # of flights</label><input id="b_walkupFlights" value="${esc(s.walkupFlights)}"></div></div>
@@ -886,12 +882,13 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      <div class="f"><label class="fl">If yes, explain</label><input id="b_accessExplain" value="${esc(s.accessExplain)}"></div></div>
    <div class="sigblock" id="sig_ldf"></div>
 
-   <div class="bolsec"><h4><span class="step">8</span> Packing &amp; bulky (PMS-19) <span class="tag tag-b">EXTRA</span></h4>
-     <p class="muted" style="margin:-4px 0 8px">Fill only if packing/materials were provided.</p>
-     <label class="chk"><input type="checkbox" id="b_fullPack" ${s.fullPack?'checked':''}> Full packing performed</label>
+   <div class="bolsec tr"><h4><span class="step">8</span> Packing &amp; bulky (PMS-19) <span class="tag tag-r">REQUIRED</span></h4>
+     <div class="f"><label class="fl">Full packing performed? <span class="req">*</span></label><select id="b_fullPack" onchange="togglePack()"><option value="">Select…</option><option ${s.fullPackChoice==='Yes'?'selected':''}>Yes</option><option ${s.fullPackChoice==='No'?'selected':''}>No</option></select></div>
      ${bulkyList(e).length?`<div class="muted" style="margin:6px 0;color:#7a5200">⚠ Bulky from inventory: ${esc(bulkyList(e).join(' · '))}</div>`:''}
-     <div class="twocol"><div class="f"><label class="fl">Materials / notes</label><input id="b_materialsNote" value="${esc(s.materialsNote)}" placeholder="e.g. 20 dish packs, 4 wardrobe boxes, TV cartons"></div>
-       <div class="f"><label class="fl">Total packing &amp; materials</label><input id="b_packTotal" class="mny" value="${esc(s.packTotal)}" placeholder="$"></div></div></div>
+     <div id="packDetail" style="display:none">
+       <div class="twocol"><div class="f"><label class="fl">Packing rate ($ per cu ft) <span class="req">*</span></label><input id="b_packRateCf" class="mny" value="${esc(s.packRateCf)}" placeholder="$/cf"></div>
+       <div class="f"><label class="fl">Total packing &amp; materials</label><input id="b_packTotal" class="mny" value="${esc(s.packTotal)}" placeholder="$"></div></div>
+       <div class="f"><label class="fl">Materials / notes</label><input id="b_materialsNote" value="${esc(s.materialsNote)}" placeholder="e.g. 20 dish packs, 4 wardrobe boxes, TV cartons"></div></div></div>
    <div class="sigblock" id="sig_pms"></div>
 
    <div class="bolsec"><h4><span class="step">9</span> Condition &amp; exceptions</h4>
@@ -901,7 +898,7 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      <p class="muted" id="sigCount2" style="margin:0 0 10px"></p>
      <div class="btnrow"><button onclick="generateBOL('${job.id}')">✅ Generate signed Bill of Lading</button><button class="ghost" onclick="openFmJob('${job.id}')">Cancel</button></div>
      <p class="muted" style="margin-top:8px">All section signatures, timestamps, device &amp; (if allowed) location are captured for the audit trail. Delivery acknowledgements are signed at delivery.</p></div>`;
-  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');window._sigState={ack:{}};fillSigBlocks();recalcTotal();},30);
+  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');window._sigState={ack:{}};fillSigBlocks();recalcTotal();toggleStorage();togglePack();},30);
   window.scrollTo(0,0);
 }
 function recalcFuel(){const g=id=>{const el=document.getElementById(id);return el?(num(el.value)||0):0;};
@@ -918,6 +915,8 @@ function recalcBalance(){const g=id=>{const el=document.getElementById(id);retur
   const ct=document.getElementById('b_chTotal'),ref=document.getElementById('b_payTotalRef');if(ct&&ref)ref.value=ct.value;
   const bal=g('b_chTotal')-g('b_payDeposit')-g('b_payOrigin');
   const el=document.getElementById('b_payBalanceDest');if(el)el.value=(Math.round(bal*100)/100).toFixed(2);}
+function toggleStorage(){const sel=document.getElementById('b_storage'),box=document.getElementById('storageDates');if(box)box.style.display=(sel&&sel.value==='Yes')?'':'none';}
+function togglePack(){const sel=document.getElementById('b_fullPack'),box=document.getElementById('packDetail');if(box)box.style.display=(sel&&sel.value==='Yes')?'':'none';}
 const SIG_TEXT={
  valuation:'I have selected the valuation option above and received the "Your Rights and Responsibilities When You Move" booklet.',
  documents:'I have received the publications: Ready to Move; Claim Filing & Arbitration Program; tariff availability, method of conversion and removed weighing of the truck.',
@@ -964,13 +963,17 @@ function generateBOL(id){const v=s=>{const el=document.getElementById(s);return 
   // RED required fields (foreman must fill)
   need('b_actualPickup','actual pick-up date');
   need('b_firstAvail','1st available delivery date');
-  need('b_deliverNoLater','delivery no later than');
   need('b_payOrigin','origin payment collected');
   need('b_method','payment method');
+  need('b_storage','storage in transit (Yes/No)');
+  need('b_ttAccess','access at delivery (tractor-trailer / shuttle)');
+  need('b_fullPack','full packing performed (Yes/No)');
   // conditional: walk-up flights when a dwelling is Walk-Up
   if((v('b_dwellingO')==='Walk-Up'||v('b_dwellingD')==='Walk-Up'))need('b_walkupFlights','# of walk-up flights');
-  // conditional: storage dates when storage-in-transit is checked
-  if(ck('b_storage')){need('b_storageStart','storage start date');need('b_storageEnd','storage end date');}
+  // conditional: storage dates when storage = Yes
+  if(v('b_storage')==='Yes'){need('b_storageStart','storage start date');need('b_storageEnd','storage end date');}
+  // conditional: packing rate per cf when full packing = Yes
+  if(v('b_fullPack')==='Yes')need('b_packRateCf','packing rate per cu ft');
   if(!val)miss.push('valuation option');if(!ck('b_consent'))miss.push('customer consent');
   let sigMiss=0;SIGPTS.forEach(pt=>pt.who.forEach(w=>{if(!(st.ack[pt.key]&&st.ack[pt.key][w]))sigMiss++;}));
   if(sigMiss)miss.push(sigMiss+' signature(s) still needed');
@@ -978,7 +981,7 @@ function generateBOL(id){const v=s=>{const el=document.getElementById(s);return 
   const cust=padData('b_custSig'),fore=padData('b_foreSig');
   const job=getJob(id);if(!job)return;
   const bol=Object.assign({},_bolSeed||{},{
-    usdot:v('b_usdot'),mc:v('b_mc'),order:v('b_order'),vanNo:v('b_van'),crew:v('b_crew'),interliner:v('b_interliner'),
+    usdot:v('b_usdot'),mc:v('b_mc'),order:v('b_order'),interliner:v('b_interliner'),
     agreedPickup:v('b_agreedPickup'),actualPickup:v('b_actualPickup'),firstAvail:v('b_firstAvail'),deliverNoLater:v('b_deliverNoLater'),
     oName:v('b_oName'),oStreet:v('b_oStreet'),oCSZ:v('b_oCSZ'),oPhone:v('b_oPhone'),oPhone2:v('b_oPhone2'),
     dName:v('b_dName'),dStreet:v('b_dStreet'),dCSZ:v('b_dCSZ'),dPhone:v('b_dPhone'),dPhone2:v('b_dPhone2'),enrouteName:v('b_enrouteName'),enroutePhone:v('b_enroutePhone'),
@@ -988,9 +991,9 @@ function generateBOL(id){const v=s=>{const el=document.getElementById(s);return 
     chConvPGS:v('b_chConvPGS'),chRedelivery:v('b_chRedelivery'),chBinding:v('b_chBinding'),chOther:v('b_chOther'),chOtherDesc:v('b_chOtherDesc'),chTotal:v('b_chTotal'),
     locStairs:v('b_locStairs'),locElevator:v('b_locElevator'),locLongCarry:v('b_locLongCarry'),locShuttle:v('b_locShuttle'),locSIT:v('b_locSIT'),locStgHandling:v('b_locStgHandling'),locExtraLabor:v('b_locExtraLabor'),locExtraStop:v('b_locExtraStop'),locWaiting:v('b_locWaiting'),
     payDiscount:v('b_payDiscount'),payDeposit:v('b_payDeposit'),payOrigin:v('b_payOrigin'),payBalanceDest:v('b_payBalanceDest'),payPriceAdj:v('b_payPriceAdj'),payDestination:v('b_payDestination'),payBalance30:v('b_payBalance30'),method:v('b_method'),
-    dedicatedTruck:v('b_dedicatedTruck'),expeditedDate:v('b_expeditedDate'),stairsFlights:v('b_stairsFlights'),extraLaborHrs:v('b_extraLaborHrs'),
-    fullPack:ck('b_fullPack'),materialsNote:v('b_materialsNote'),packTotal:v('b_packTotal'),
-    storage:ck('b_storage'),storageStart:v('b_storageStart'),storageEnd:v('b_storageEnd'),ttAccess:ck('b_ttAccess'),dwellingO:v('b_dwellingO'),dwellingD:v('b_dwellingD'),walkupFlights:v('b_walkupFlights'),accessDenied:ck('b_accessDenied'),accessExplain:v('b_accessExplain'),
+    expeditedDate:v('b_expeditedDate'),stairsFlights:v('b_stairsFlights'),extraLaborHrs:v('b_extraLaborHrs'),
+    fullPack:(v('b_fullPack')==='Yes'),fullPackChoice:v('b_fullPack'),packRateCf:v('b_packRateCf'),materialsNote:v('b_materialsNote'),packTotal:v('b_packTotal'),
+    storage:(v('b_storage')==='Yes'),storageChoice:v('b_storage'),storageStart:v('b_storageStart'),storageEnd:v('b_storageEnd'),ttAccess:(v('b_ttAccess')==='Tractor-trailer access available'),ttAccessChoice:v('b_ttAccess'),dwellingO:v('b_dwellingO'),dwellingD:v('b_dwellingD'),walkupFlights:v('b_walkupFlights'),accessDenied:ck('b_accessDenied'),accessExplain:v('b_accessExplain'),
     exceptions:v('b_exceptions'),originAmt:v('b_payOrigin'),
     sigs:st.ack,consent:true,custSig:cust,foreSig:fore,signed:true,signedAt:now(),device:(navigator.userAgent||'').slice(0,70),geo:window._geo||null});
   job.bol=bol;saveJob(job);renderBOLDone(id);}
