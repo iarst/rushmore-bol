@@ -548,7 +548,7 @@ function vDashboard(){
     <button class="ghost" onclick="checkInbox(this)">🔄 Refresh</button>
     <span class="right" style="align-self:center"><span class="pill p-grey">${c.New||0} new</span> <span class="pill p-info">${c.Assigned||0} assigned</span> <span class="pill p-ok">${c.Scheduled||0} scheduled</span></span></div>
     <div class="joblist">${rows}</div></div>
-    <div class="card"><p class="muted" style="margin:0">Pilot build · Estimates auto-import from <b>estimates@</b> and the official BOL is generated on the backend. The dispatch board is still saved in this browser (per device) — shared cross-device sync and per-user logins arrive with the production database.</p></div>`;
+    <div class="card"><p class="muted" style="margin:0">Pilot build · Estimates auto-import from <b>estimates@</b>, the dispatch board is saved in a <b>shared database</b> (synced across every device, kept through restarts), and the official BOL is generated on the backend. Access is PIN-gated for now; per-user logins arrive later.</p></div>`;
 }
 function importJobs(list){let n=0;(list||[]).forEach(j=>{if(!j||!j.id)return;const ex=getJob(j.id);
   if(!ex){saveJob(j);n++;}
