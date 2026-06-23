@@ -1056,8 +1056,8 @@ const BACKEND='https://rushmore-bol-backend.onrender.com';
 function parseCSZ(s){s=String(s||'');const i=s.lastIndexOf(',');const city=i>=0?s.slice(0,i).trim():s.trim();const rest=(i>=0?s.slice(i+1):'').trim().split(/\s+/);return {city:city,state:rest[0]||'',zip:rest[1]||''};}
 function backendPayload(job){const e=job.est||{},b=job.bol||{};const oc=parseCSZ(b.oCSZ),dc=parseCSZ(b.dCSZ);
   const sg=(k,w)=>{const a=(b.sigs||{})[k];return a&&a[w]?a[w].img:'';};
-  // sum the filled accessorial charges for the AS-22 total
-  const accKeys=['chPacking','chBulky','chStairs','chElevator','chLongCarry','chShuttle','chSIT','chStgHandling','chExtraLabor','chExtraStop','chWaiting','chConvPGS','chRedelivery','chBinding','chOther'];
+  // AS-22 total = ONLY the accessorial services that have a row on that page (not packing/bulky/conv/binding/other, which live on the BOL face)
+  const accKeys=['chStairs','chElevator','chLongCarry','chShuttle','chSIT','chStgHandling','chExtraLabor','chExtraStop','chWaiting','chRedelivery'];
   const chAccTotal=accKeys.reduce((t,k)=>t+(num(b[k])||0),0);
   return {van:b.vanNo,order:b.order||job.id,agreedPickup:b.agreedPickup,actualPickup:b.actualPickup,firstAvail:b.firstAvail,deliverNoLater:b.deliverNoLater,
     oName:b.oName,oStreet:b.oStreet,oCity:oc.city,oState:oc.state,oZip:oc.zip,oPhone:b.oPhone,
