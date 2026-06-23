@@ -874,7 +874,7 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
 
    <div class="bolsec"><h4><span class="step">6</span> Payment schedule</h4>
      <div class="ackbox">Total − deposit = balance. Enter the <b>origin payment collected at pickup</b>; the <b>balance due at delivery</b> is calculated automatically (balance − origin payment).</div>
-     ${chr('Tariff discounts','b_payDiscount',s.payDiscount)}
+     ${chr('Discount','b_payDiscount',s.payDiscount)}
      <div class="chrow"><span>Total applicable charges</span><input id="b_payTotalRef" class="mny" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" readonly style="background:#f3f6fb"></div>
      <div class="chrow"><span>Prepaid deposit (paid at booking)</span><input id="b_payDeposit" class="mny" value="${(s.payDeposit!==''&&s.payDeposit!=null)?esc(s.payDeposit):''}" oninput="recalcBalance()" placeholder="$"></div>
      <div class="chrow tr"><span>💵 Origin payment collected (at pickup) <span class="req">*</span><span class="tag tag-r">REQUIRED</span></span><input id="b_payOrigin" class="mny" value="${(s.payOrigin!==''&&s.payOrigin!=null)?esc(s.payOrigin):''}" oninput="recalcBalance()" placeholder="$"></div>
