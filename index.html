@@ -759,6 +759,13 @@ function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);cons
   const _other=_gross>0?Math.max(0,+(_gross-_namedNonOther).toFixed(2)):0;
   const _packRateTier=_vol<=500?2:(_vol<=1000?1.75:1.5);
   const _packRate=(_packA>0&&_vol>0)?+(_packA/_vol).toFixed(2):_packRateTier;  // use the estimate's actual $/cf when packing was quoted
+  // describe what's bundled into "Other", with each amount, so the customer sees the breakdown
+  const _otherParts=[];
+  if(_binding>0)_otherParts.push('Binding estimate fee '+money(_binding));
+  if(_exped>0)_otherParts.push('Expedited '+money(_exped));
+  const _otherRem=+(_other-_binding-_exped).toFixed(2);
+  if(Math.abs(_otherRem)>=0.5)_otherParts.push('Other charges '+money(_otherRem));
+  const _otherDesc=_otherParts.join(' + ')||'Binding estimate fee';
   return Object.assign({
     usdot:'4086767',mc:'1560709',order:job.id,vanNo:'',crew:'',interliner:'',
     agreedPickup:d,actualPickup:d,firstAvail:e.firstDelivery||'',deliverNoLater:'',
@@ -768,7 +775,7 @@ function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);cons
     valuation:/Full Value/i.test(e.valuation||'')?'full':'waiver',declaredValue:'',fvpEstimate:'',
     chTransport:(_basic||''),fuelPct:(e.fuelPct||'15'),chFuel:(_fuelA||''),chPacking:(_packA||''),chBulky:(_bulkyA||''),
     chStairs:'',chElevator:'',chLongCarry:'',chShuttle:(_shuttleA||''),chSIT:'',chStgHandling:'',chExtraLabor:'',chExtraStop:'',chWaiting:'',
-    chConvPGS:(_convA||''),chRedelivery:'',chBinding:'',chOther:(_other||''),chOtherDesc:('Binding estimate fee'+(_exped>0?' + Expedited':'')),chTotal:(_gross||''),
+    chConvPGS:(_convA||''),chRedelivery:'',chBinding:'',chOther:(_other||''),chOtherDesc:_otherDesc,chTotal:(_gross||''),
     locStairs:'—',locElevator:'—',locLongCarry:'—',locShuttle:(_shuttleA>0?'Both':'—'),locSIT:'—',locStgHandling:'—',locExtraLabor:'—',locExtraStop:'—',locWaiting:'—',
     payDiscount:(_disc||''),payDeposit:(e.deposit!=null?e.deposit:''),payOrigin:'',payBalanceDest:'',payPriceAdj:'',payDestination:'',payBalance30:'',method:'',
     dedicatedTruck:'',expeditedDate:'',stairsFlights:'',extraLaborHrs:'',
@@ -1062,7 +1069,7 @@ function backendPayload(job){const e=job.est||{},b=job.bol||{};const oc=parseCSZ
     chExtraLabor:b.chExtraLabor,locExtraLabor:b.locExtraLabor,chExtraStop:b.chExtraStop,locExtraStop:b.locExtraStop,chWaiting:b.chWaiting,locWaiting:b.locWaiting,
     chRedelivery:b.chRedelivery,chAccTotal:chAccTotal?chAccTotal.toFixed(2):'',
     chOther:((num(b.chOther)||0)+(num(b.chConvPGS)||0)+(num(b.chBinding)||0))?((num(b.chOther)||0)+(num(b.chConvPGS)||0)+(num(b.chBinding)||0)).toFixed(2):'',
-    chOtherDesc:(function(){const p=[];if(b.chOtherDesc)p.push(b.chOtherDesc);if((num(b.chBinding)||0)>0&&!/bind/i.test(b.chOtherDesc||''))p.push('Binding est fee');if((num(b.chConvPGS)||0)>0)p.push('Convenience + PGS');return p.join(' + ');})(),
+    chOtherDesc:(function(){let d=(b.chOtherDesc||'').replace(/\s*\$[\d,]+\.?\d*/g,'');if((num(b.chConvPGS)||0)>0)d+=' + Convenience/PGS';return d.replace(/^\s*\+\s*/,'').slice(0,60);})(),
     chTotal:b.chTotal,payDiscount:b.payDiscount,payDeposit:b.payDeposit,payOrigin:b.payOrigin,payBalanceDest:b.payBalanceDest,payPriceAdj:b.payPriceAdj,payDestination:b.payDestination,payBalance30:b.payBalance30,
     dedicatedTruck:b.dedicatedTruck,expeditedDate:b.expeditedDate,fullPack:b.fullPack,materialsNote:b.materialsNote,storageStart:b.storageStart,storageEnd:b.storageEnd,walkupFlights:b.walkupFlights,dwellingD:b.dwellingD,
     ttAccess:b.ttAccess,storage:b.storage,dwellingO:b.dwellingO,volume:e.volume,rate:e.rate,packTotal:b.packTotal,
