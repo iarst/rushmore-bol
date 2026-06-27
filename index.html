@@ -769,7 +769,7 @@ function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);cons
     valuation:/Full Value/i.test(e.valuation||'')?'full':'waiver',declaredValue:'',fvpEstimate:'',
     chTransport:(_basic||''),fuelPct:(e.fuelPct||'15'),chFuel:(_fuelA||''),chPacking:(_packA||''),chBulky:(_bulkyA||''),
     chStairs:'',chElevator:'',chLongCarry:'',chShuttle:(_shuttleA||''),chSIT:'',chStgHandling:'',chExtraLabor:'',chExtraStop:'',chWaiting:'',
-    chConv:(_convA||''),chPGS:(_pgsA||''),chBinding:(_binding||''),chExpedited:(_exped||''),chRedelivery:'',chOther:(_other||''),chOtherDesc:'',chTotal:(_gross||''),
+    chConv:(_convA||''),chPGS:(_pgsA||''),chBinding:(_binding||''),chExpedited:(_exped||''),chRedelivery:'',chOther:(_other||''),chOtherDesc:'',chTotal:(_net||''),
     locStairs:'—',locElevator:'—',locLongCarry:'—',locShuttle:(_shuttleA>0?'Both':'—'),locSIT:'—',locStgHandling:'—',locExtraLabor:'—',locExtraStop:'—',locWaiting:'—',
     payDiscount:(_disc||''),payDeposit:(e.deposit!=null?e.deposit:''),payOrigin:'',payBalanceDest:'',payPriceAdj:'',payDestination:'',payBalance30:'',method:'',
     dedicatedTruck:'',expeditedDate:'',stairsFlights:'',extraLaborHrs:'',
@@ -864,8 +864,8 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      <div id="customCharges"></div>
      <button type="button" class="ghost sm" onclick="addCustomCharge()" style="margin:6px 0 2px">+ Add custom charge line</button>
      <p class="muted" style="margin:6px 0 2px;font-size:11.5px">The total auto-adds every line above so it always matches. Use <b>+ Add custom charge line</b> for any fee that isn't listed — it prints as its own line on the Bill of Lading.</p>
-     <div class="chrow tot"><span>TOTAL APPLICABLE CHARGES <span class="muted">(auto)</span></span><input id="b_chTotal" class="mny big" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" readonly style="background:#eef3f9;font-weight:800"></div>
-     <div class="chrow"><span>Discount <span class="muted">(deducted from total)</span></span><input id="b_payDiscount" class="mny" value="${(s.payDiscount!==''&&s.payDiscount!=null)?esc(s.payDiscount):''}" oninput="recalcBalance()" placeholder="$"></div>
+     <div class="chrow"><span>Discount <span class="muted">(deducted before the total)</span></span><input id="b_payDiscount" class="mny" value="${(s.payDiscount!==''&&s.payDiscount!=null)?esc(s.payDiscount):''}" oninput="recalcTotal()" placeholder="$"></div>
+     <div class="chrow tot"><span>TOTAL APPLICABLE CHARGES <span class="muted">(auto, after discount)</span></span><input id="b_chTotal" class="mny big" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" readonly style="background:#eef3f9;font-weight:800"></div>
      <div class="subh">Special delivery (AS-22) <span class="tag tag-b">EXTRA</span></div>
      <div class="twocol tb"><div class="f"><label class="fl">Expedited — deliver on/before</label><input type="date" id="b_expeditedDate" value="${esc(s.expeditedDate)}"></div>
        <div class="f"><label class="fl">Stair flights (beyond 1st)</label><input id="b_stairsFlights" value="${esc(s.stairsFlights)}"></div>
@@ -873,9 +873,8 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
    <div class="sigblock" id="sig_accessorial"></div>
 
    <div class="bolsec"><h4><span class="step">6</span> Payment schedule</h4>
-     <div class="ackbox">Total applicable charges − discount (entered in the charges section above) = <b>total charges (less discounts)</b>. Net − deposit − origin payment = <b>balance due at delivery</b> (calculated automatically). Enter the <b>origin payment collected at pickup</b>.</div>
-     <div class="chrow"><span>Total applicable charges</span><input id="b_payTotalRef" class="mny" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" readonly style="background:#f3f6fb"></div>
-     <div class="chrow"><span><b>Total charges (less discounts)</b></span><input id="b_payNet" class="mny" value="" readonly style="background:#f3f6fb;font-weight:700"></div>
+     <div class="ackbox"><b>Total applicable charges</b> already has the discount deducted (in the charges section). Total − deposit − origin payment = <b>balance due at delivery</b> (calculated automatically). Enter the <b>origin payment collected at pickup</b>.</div>
+     <div class="chrow"><span>Total applicable charges <span class="muted">(after discount)</span></span><input id="b_payTotalRef" class="mny" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" readonly style="background:#f3f6fb"></div>
      <div class="chrow"><span>Prepaid deposit (paid at booking)</span><input id="b_payDeposit" class="mny" value="${(s.payDeposit!==''&&s.payDeposit!=null)?esc(s.payDeposit):''}" oninput="recalcBalance()" placeholder="$"></div>
      <div class="chrow tr"><span>💵 Origin payment collected (at pickup) <span class="req">*</span><span class="tag tag-r">REQUIRED</span></span><input id="b_payOrigin" class="mny" value="${(s.payOrigin!==''&&s.payOrigin!=null)?esc(s.payOrigin):''}" oninput="recalcBalance()" placeholder="$"></div>
      <div class="chrow"><span><b>Balance due at delivery</b> <span class="muted">(auto)</span></span><input id="b_payBalanceDest" class="mny" value="${(s.payBalanceDest!==''&&s.payBalanceDest!=null)?esc(s.payBalanceDest):''}" readonly style="background:#e7f6ef;font-weight:800;color:#0f6e56"></div>
@@ -934,14 +933,14 @@ function recalcTotal(){const g=id=>{const el=document.getElementById(id);return 
   const keys=['b_chTransport','b_chFuel','b_chPacking','b_chBulky','b_chStairs','b_chElevator','b_chLongCarry','b_chShuttle','b_chSIT','b_chStgHandling','b_chExtraLabor','b_chExtraStop','b_chWaiting','b_chConv','b_chPGS','b_chBinding','b_chExpedited','b_chRedelivery','b_chOther'];
   let sum=keys.reduce((t,k)=>t+g(k),0);
   document.querySelectorAll('#customCharges .ccrow').forEach(r=>{sum+=num(r.querySelector('.ccamt').value)||0;});
+  sum-=g('b_payDiscount');                                              // discount deducted before the total
   const ct=document.getElementById('b_chTotal');if(ct)ct.value=(Math.round(sum*100)/100).toFixed(2);
   recalcBalance();}
 function addCustomCharge(label,amt){const box=document.getElementById('customCharges');if(!box)return;const d=document.createElement('div');d.className='ccrow chrow';d.innerHTML='<span><input class="cclabel" value="'+esc(label||'')+'" placeholder="charge description" style="width:230px;padding:4px 6px"></span><span class="ce"><input class="ccamt mny" value="'+(amt!=null?esc(amt):'')+'" placeholder="$" oninput="recalcTotal()" style="width:110px"><button type="button" class="padclear" onclick="this.closest(\'.ccrow\').remove();recalcTotal()">✕</button></span>';box.appendChild(d);recalcTotal();}
 function recalcBalance(){const g=id=>{const el=document.getElementById(id);return el?(num(el.value)||0):0;};
+  // b_chTotal is already net (the discount was deducted in recalcTotal, before the total)
   const ct=document.getElementById('b_chTotal'),ref=document.getElementById('b_payTotalRef');if(ct&&ref)ref.value=ct.value;
-  const net=g('b_chTotal')-g('b_payDiscount');                         // discount deducted from total
-  const nel=document.getElementById('b_payNet');if(nel)nel.value=(Math.round(net*100)/100).toFixed(2);
-  const bal=net-g('b_payDeposit')-g('b_payOrigin');
+  const bal=g('b_chTotal')-g('b_payDeposit')-g('b_payOrigin');
   const el=document.getElementById('b_payBalanceDest');if(el)el.value=(Math.round(bal*100)/100).toFixed(2);}
 function toggleStorage(){const sel=document.getElementById('b_storage'),box=document.getElementById('storageDates');if(box)box.style.display=(sel&&sel.value==='Yes')?'':'none';}
 /* Rushmore packing materials price list (from PMS-19) */
