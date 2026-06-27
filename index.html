@@ -872,9 +872,10 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
    <div class="sigblock" id="sig_accessorial"></div>
 
    <div class="bolsec"><h4><span class="step">6</span> Payment schedule</h4>
-     <div class="ackbox">Total − deposit = balance. Enter the <b>origin payment collected at pickup</b>; the <b>balance due at delivery</b> is calculated automatically (balance − origin payment).</div>
-     ${chr('Discount','b_payDiscount',s.payDiscount)}
+     <div class="ackbox">Total applicable charges − discount = <b>total charges (less discounts)</b>. Net − deposit − origin payment = <b>balance due at delivery</b> (calculated automatically). Enter the <b>origin payment collected at pickup</b>.</div>
      <div class="chrow"><span>Total applicable charges</span><input id="b_payTotalRef" class="mny" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" readonly style="background:#f3f6fb"></div>
+     <div class="chrow"><span>Discount</span><input id="b_payDiscount" class="mny" value="${(s.payDiscount!==''&&s.payDiscount!=null)?esc(s.payDiscount):''}" oninput="recalcBalance()" placeholder="$"></div>
+     <div class="chrow"><span><b>Total charges (less discounts)</b></span><input id="b_payNet" class="mny" value="" readonly style="background:#f3f6fb;font-weight:700"></div>
      <div class="chrow"><span>Prepaid deposit (paid at booking)</span><input id="b_payDeposit" class="mny" value="${(s.payDeposit!==''&&s.payDeposit!=null)?esc(s.payDeposit):''}" oninput="recalcBalance()" placeholder="$"></div>
      <div class="chrow tr"><span>💵 Origin payment collected (at pickup) <span class="req">*</span><span class="tag tag-r">REQUIRED</span></span><input id="b_payOrigin" class="mny" value="${(s.payOrigin!==''&&s.payOrigin!=null)?esc(s.payOrigin):''}" oninput="recalcBalance()" placeholder="$"></div>
      <div class="chrow"><span><b>Balance due at delivery</b> <span class="muted">(auto)</span></span><input id="b_payBalanceDest" class="mny" value="${(s.payBalanceDest!==''&&s.payBalanceDest!=null)?esc(s.payBalanceDest):''}" readonly style="background:#e7f6ef;font-weight:800;color:#0f6e56"></div>
@@ -938,7 +939,9 @@ function recalcTotal(){const g=id=>{const el=document.getElementById(id);return 
 function addCustomCharge(label,amt){const box=document.getElementById('customCharges');if(!box)return;const d=document.createElement('div');d.className='ccrow chrow';d.innerHTML='<span><input class="cclabel" value="'+esc(label||'')+'" placeholder="charge description" style="width:230px;padding:4px 6px"></span><span class="ce"><input class="ccamt mny" value="'+(amt!=null?esc(amt):'')+'" placeholder="$" oninput="recalcTotal()" style="width:110px"><button type="button" class="padclear" onclick="this.closest(\'.ccrow\').remove();recalcTotal()">✕</button></span>';box.appendChild(d);recalcTotal();}
 function recalcBalance(){const g=id=>{const el=document.getElementById(id);return el?(num(el.value)||0):0;};
   const ct=document.getElementById('b_chTotal'),ref=document.getElementById('b_payTotalRef');if(ct&&ref)ref.value=ct.value;
-  const bal=g('b_chTotal')-g('b_payDiscount')-g('b_payDeposit')-g('b_payOrigin');
+  const net=g('b_chTotal')-g('b_payDiscount');                         // discount deducted from total
+  const nel=document.getElementById('b_payNet');if(nel)nel.value=(Math.round(net*100)/100).toFixed(2);
+  const bal=net-g('b_payDeposit')-g('b_payOrigin');
   const el=document.getElementById('b_payBalanceDest');if(el)el.value=(Math.round(bal*100)/100).toFixed(2);}
 function toggleStorage(){const sel=document.getElementById('b_storage'),box=document.getElementById('storageDates');if(box)box.style.display=(sel&&sel.value==='Yes')?'':'none';}
 /* Rushmore packing materials price list (from PMS-19) */
