@@ -1087,7 +1087,7 @@ function backendPayload(job){const e=job.est||{},b=job.bol||{};const oc=parseCSZ
   (b.customCharges||[]).forEach(cc=>{if(cc&&(num(cc.amt)||0)!==0)charges.push({label:(cc.label||'Other charge'),amount:(num(cc.amt)||0).toFixed(2),detail:''});});
   const payment={total:b.chTotal,discount:b.payDiscount,deposit:b.payDeposit,originPayment:b.payOrigin,balanceDest:b.payBalanceDest,balance30:b.payBalance30};
   return {van:b.vanNo,order:b.order||job.id,agreedPickup:b.agreedPickup,actualPickup:b.actualPickup,firstAvail:b.firstAvail,deliverNoLater:b.deliverNoLater,
-    charges:charges,payment:payment,declaredValue:b.declaredValue,exceptions:b.exceptions,method:b.method,custSig:b.custSig,foreSig:b.foreSig,
+    charges:charges,payment:payment,declaredValue:b.declaredValue,exceptions:b.exceptions,method:b.method,custSig:b.custSig,foreSig:b.foreSig,signedAt:b.signedAt,
     oName:b.oName,oStreet:b.oStreet,oCity:oc.city,oState:oc.state,oZip:oc.zip,oPhone:b.oPhone,
     dName:b.dName,dStreet:b.dStreet,dCity:dc.city,dState:dc.state,dZip:dc.zip,dPhone:b.dPhone,
     enrouteName:b.enrouteName,enroutePhone:b.enroutePhone,valuation:b.valuation,
