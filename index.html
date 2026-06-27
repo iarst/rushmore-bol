@@ -754,18 +754,11 @@ function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);cons
   const _disc=+e.discount||0;
   const _net=(e.total!=null?+e.total:0);
   const _gross=+( _net+_disc ).toFixed(2);
-  // every charge that has its own BOL row; everything else (binding, expedited, itemized extras) reconciles into "Other"
-  const _namedNonOther=_basic+_fuelA+_packA+_shuttleA+_bulkyA+_convA;
+  // each fee is its own line now (binding & expedited included); only a true leftover lands in "Other"
+  const _namedNonOther=_basic+_fuelA+_packA+_shuttleA+_bulkyA+_convA+_binding+_exped;
   const _other=_gross>0?Math.max(0,+(_gross-_namedNonOther).toFixed(2)):0;
   const _packRateTier=_vol<=500?2:(_vol<=1000?1.75:1.5);
   const _packRate=(_packA>0&&_vol>0)?+(_packA/_vol).toFixed(2):_packRateTier;  // use the estimate's actual $/cf when packing was quoted
-  // describe what's bundled into "Other", with each amount, so the customer sees the breakdown
-  const _otherParts=[];
-  if(_binding>0)_otherParts.push('Binding estimate fee '+money(_binding));
-  if(_exped>0)_otherParts.push('Expedited '+money(_exped));
-  const _otherRem=+(_other-_binding-_exped).toFixed(2);
-  if(Math.abs(_otherRem)>=0.5)_otherParts.push('Other charges '+money(_otherRem));
-  const _otherDesc=_otherParts.join(' + ')||'Binding estimate fee';
   return Object.assign({
     usdot:'4086767',mc:'1560709',order:job.id,vanNo:'',crew:'',interliner:'',
     agreedPickup:d,actualPickup:d,firstAvail:e.firstDelivery||'',deliverNoLater:'',
@@ -775,7 +768,7 @@ function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);cons
     valuation:/Full Value/i.test(e.valuation||'')?'full':'waiver',declaredValue:'',fvpEstimate:'',
     chTransport:(_basic||''),fuelPct:(e.fuelPct||'15'),chFuel:(_fuelA||''),chPacking:(_packA||''),chBulky:(_bulkyA||''),
     chStairs:'',chElevator:'',chLongCarry:'',chShuttle:(_shuttleA||''),chSIT:'',chStgHandling:'',chExtraLabor:'',chExtraStop:'',chWaiting:'',
-    chConvPGS:(_convA||''),chRedelivery:'',chBinding:'',chOther:(_other||''),chOtherDesc:_otherDesc,chTotal:(_gross||''),
+    chConvPGS:(_convA||''),chBinding:(_binding||''),chExpedited:(_exped||''),chRedelivery:'',chOther:(_other||''),chOtherDesc:'',chTotal:(_gross||''),
     locStairs:'—',locElevator:'—',locLongCarry:'—',locShuttle:(_shuttleA>0?'Both':'—'),locSIT:'—',locStgHandling:'—',locExtraLabor:'—',locExtraStop:'—',locWaiting:'—',
     payDiscount:(_disc||''),payDeposit:(e.deposit!=null?e.deposit:''),payOrigin:'',payBalanceDest:'',payPriceAdj:'',payDestination:'',payBalance30:'',method:'',
     dedicatedTruck:'',expeditedDate:'',stairsFlights:'',extraLaborHrs:'',
@@ -862,8 +855,10 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      ${chrL('Extra stop','b_locExtraStop',s.locExtraStop,'b_chExtraStop',s.chExtraStop)}
      ${chrL('Waiting time / overnight','b_locWaiting',s.locWaiting,'b_chWaiting',s.chWaiting)}
      ${chr('Convenience fee + PGS delivery','b_chConvPGS',s.chConvPGS)}
+     ${chr('Binding estimate fee','b_chBinding',s.chBinding)}
+     ${chr('Expedited','b_chExpedited',s.chExpedited)}
      ${chr('Redelivery','b_chRedelivery',s.chRedelivery)}
-     <div class="chrow"><span>Other — <input id="b_chOtherDesc" value="${esc(s.chOtherDesc)}" placeholder="describe (e.g. Binding estimate fee)" style="width:230px;padding:4px 6px"></span>${A('b_chOther',s.chOther)}</div></div>
+     <div class="chrow"><span>Other — <input id="b_chOtherDesc" value="${esc(s.chOtherDesc)}" placeholder="describe" style="width:230px;padding:4px 6px"></span>${A('b_chOther',s.chOther)}</div></div>
      <div id="customCharges"></div>
      <button type="button" class="ghost sm" onclick="addCustomCharge()" style="margin:6px 0 2px">+ Add custom charge line</button>
      <p class="muted" style="margin:6px 0 2px;font-size:11.5px">The total auto-adds every line above so it always matches. Use <b>+ Add custom charge line</b> for any fee that isn't listed — it prints as its own line on the Bill of Lading.</p>
@@ -933,7 +928,7 @@ function recalcFuel(){const g=id=>{const el=document.getElementById(id);return e
   if(base>0&&pct>0)f.value=(Math.round(base*pct)/100).toFixed(2);
   recalcTotal();}
 function recalcTotal(){const g=id=>{const el=document.getElementById(id);return el?(num(el.value)||0):0;};
-  const keys=['b_chTransport','b_chFuel','b_chPacking','b_chBulky','b_chStairs','b_chElevator','b_chLongCarry','b_chShuttle','b_chSIT','b_chStgHandling','b_chExtraLabor','b_chExtraStop','b_chWaiting','b_chConvPGS','b_chRedelivery','b_chBinding','b_chOther'];
+  const keys=['b_chTransport','b_chFuel','b_chPacking','b_chBulky','b_chStairs','b_chElevator','b_chLongCarry','b_chShuttle','b_chSIT','b_chStgHandling','b_chExtraLabor','b_chExtraStop','b_chWaiting','b_chConvPGS','b_chBinding','b_chExpedited','b_chRedelivery','b_chOther'];
   let sum=keys.reduce((t,k)=>t+g(k),0);
   document.querySelectorAll('#customCharges .ccrow').forEach(r=>{sum+=num(r.querySelector('.ccamt').value)||0;});
   const ct=document.getElementById('b_chTotal');if(ct)ct.value=(Math.round(sum*100)/100).toFixed(2);
@@ -1031,7 +1026,7 @@ function generateBOL(id){const v=s=>{const el=document.getElementById(s);return 
     valuation:val,declaredValue:v('b_declaredValue'),fvpEstimate:v('b_fvpEstimate'),
     chTransport:v('b_chTransport'),fuelPct:v('b_fuelPct'),chFuel:v('b_chFuel'),chPacking:v('b_chPacking'),chBulky:v('b_chBulky'),
     chStairs:v('b_chStairs'),chElevator:v('b_chElevator'),chLongCarry:v('b_chLongCarry'),chShuttle:v('b_chShuttle'),chSIT:v('b_chSIT'),chStgHandling:v('b_chStgHandling'),chExtraLabor:v('b_chExtraLabor'),chExtraStop:v('b_chExtraStop'),chWaiting:v('b_chWaiting'),
-    chConvPGS:v('b_chConvPGS'),chRedelivery:v('b_chRedelivery'),chBinding:v('b_chBinding'),chOther:v('b_chOther'),chOtherDesc:v('b_chOtherDesc'),chTotal:v('b_chTotal'),
+    chConvPGS:v('b_chConvPGS'),chBinding:v('b_chBinding'),chExpedited:v('b_chExpedited'),chRedelivery:v('b_chRedelivery'),chOther:v('b_chOther'),chOtherDesc:v('b_chOtherDesc'),chTotal:v('b_chTotal'),
     locStairs:v('b_locStairs'),locElevator:v('b_locElevator'),locLongCarry:v('b_locLongCarry'),locShuttle:v('b_locShuttle'),locSIT:v('b_locSIT'),locStgHandling:v('b_locStgHandling'),locExtraLabor:v('b_locExtraLabor'),locExtraStop:v('b_locExtraStop'),locWaiting:v('b_locWaiting'),
     payDiscount:v('b_payDiscount'),payDeposit:v('b_payDeposit'),payOrigin:v('b_payOrigin'),payBalanceDest:v('b_payBalanceDest'),payPriceAdj:v('b_payPriceAdj'),payDestination:v('b_payDestination'),payBalance30:v('b_payBalance30'),method:v('b_method'),
     expeditedDate:v('b_expeditedDate'),stairsFlights:v('b_stairsFlights'),extraLaborHrs:v('b_extraLaborHrs'),
@@ -1082,10 +1077,12 @@ function backendPayload(job){const e=job.est||{},b=job.bol||{};const oc=parseCSZ
   add('Extra stop',b.chExtraStop,Lc(b.locExtraStop));
   add('Waiting time / overnight',b.chWaiting,Lc(b.locWaiting));
   add('Convenience fee + PGS delivery',b.chConvPGS,'');
+  add('Binding estimate fee',b.chBinding,'');
+  add('Expedited',b.chExpedited,'');
   add('Redelivery',b.chRedelivery,'');
-  add(((b.chOtherDesc||'Other').replace(/\s*\$[\d,]+\.?\d*/g,'').trim()||'Other'),b.chOther,'');
+  add(((b.chOtherDesc||'Other charges').replace(/\s*\$[\d,]+\.?\d*/g,'').trim()||'Other charges'),b.chOther,'');
   (b.customCharges||[]).forEach(cc=>{if(cc&&(num(cc.amt)||0)!==0)charges.push({label:(cc.label||'Other charge'),amount:(num(cc.amt)||0).toFixed(2),detail:''});});
-  const payment={total:b.chTotal,discount:b.payDiscount,deposit:b.payDeposit,originPayment:b.payOrigin,balanceDest:b.payBalanceDest,balance30:b.payBalance30};
+  const payment={total:b.chTotal,discount:b.payDiscount,deposit:b.payDeposit,originPayment:b.payOrigin,balanceDest:b.payBalanceDest,balance30:b.payBalance30,priceAdj:b.payPriceAdj,destination:b.payDestination};
   return {van:b.vanNo,order:b.order||job.id,agreedPickup:b.agreedPickup,actualPickup:b.actualPickup,firstAvail:b.firstAvail,deliverNoLater:b.deliverNoLater,
     charges:charges,payment:payment,declaredValue:b.declaredValue,exceptions:b.exceptions,method:b.method,custSig:b.custSig,foreSig:b.foreSig,signedAt:b.signedAt,
     oName:b.oName,oStreet:b.oStreet,oCity:oc.city,oState:oc.state,oZip:oc.zip,oPhone:b.oPhone,
