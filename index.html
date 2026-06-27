@@ -781,7 +781,7 @@ function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);cons
     dedicatedTruck:'',expeditedDate:'',stairsFlights:'',extraLaborHrs:'',
     fullPackChoice:(_packA>0?'Yes':(e.fullPack?'Yes':'No')),packCf:(_vol||''),packRateCf:_packRate.toFixed(2),packMaterials:[],materialsNote:'',packTotal:'',
     storageChoice:'No',storageStart:'',storageEnd:'',ttAccessChoice:'Tractor-trailer access available',dwellingO:e.oType||'Private Home',dwellingD:e.dType||'Private Home',walkupFlights:'',accessDenied:false,accessExplain:'',
-    exceptions:'',consent:false,custSig:'',foreSig:''},b);}
+    exceptions:'',customCharges:[],consent:false,custSig:'',foreSig:''},b);}
 function openBOL(id){renderBOL(id);}
 function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e=job.est||{};const p=payments(e);const s=_bolSeed=bolSeed(job);
   try{if(navigator.geolocation)navigator.geolocation.getCurrentPosition(g=>{window._geo={lat:+g.coords.latitude.toFixed(5),lng:+g.coords.longitude.toFixed(5),at:now()};},()=>{},{timeout:6000});}catch(_){}
@@ -864,7 +864,9 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      ${chr('Convenience fee + PGS delivery','b_chConvPGS',s.chConvPGS)}
      ${chr('Redelivery','b_chRedelivery',s.chRedelivery)}
      <div class="chrow"><span>Other — <input id="b_chOtherDesc" value="${esc(s.chOtherDesc)}" placeholder="describe (e.g. Binding estimate fee)" style="width:230px;padding:4px 6px"></span>${A('b_chOther',s.chOther)}</div></div>
-     <p class="muted" style="margin:6px 0 2px;font-size:11.5px">The total auto-adds every line above so it always matches. Any estimate amount not itemized sits in <b>Other</b> — move it into the right line if you know what it is.</p>
+     <div id="customCharges"></div>
+     <button type="button" class="ghost sm" onclick="addCustomCharge()" style="margin:6px 0 2px">+ Add custom charge line</button>
+     <p class="muted" style="margin:6px 0 2px;font-size:11.5px">The total auto-adds every line above so it always matches. Use <b>+ Add custom charge line</b> for any fee that isn't listed — it prints as its own line on the Bill of Lading.</p>
      <div class="chrow tot"><span>TOTAL APPLICABLE CHARGES <span class="muted">(auto)</span></span><input id="b_chTotal" class="mny big" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" readonly style="background:#eef3f9;font-weight:800"></div>
      <div class="subh">Special delivery (AS-22) <span class="tag tag-b">EXTRA</span></div>
      <div class="twocol tb"><div class="f"><label class="fl">Expedited — deliver on/before</label><input type="date" id="b_expeditedDate" value="${esc(s.expeditedDate)}"></div>
@@ -922,7 +924,7 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      <p class="muted" id="sigCount2" style="margin:0 0 10px"></p>
      <div class="btnrow"><button onclick="generateBOL('${job.id}')">✅ Generate signed Bill of Lading</button><button class="ghost" onclick="openFmJob('${job.id}')">Cancel</button></div>
      <p class="muted" style="margin-top:8px">All section signatures, timestamps, device &amp; (if allowed) location are captured for the audit trail. Delivery acknowledgements are signed at delivery.</p></div>`;
-  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');window._sigState={ack:{}};fillSigBlocks();recalcTotal();toggleStorage();togglePack();},30);
+  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');window._sigState={ack:{}};fillSigBlocks();((s.customCharges)||[]).forEach(c=>addCustomCharge(c.label,c.amt));recalcTotal();toggleStorage();togglePack();},30);
   window.scrollTo(0,0);
 }
 function recalcFuel(){const g=id=>{const el=document.getElementById(id);return el?(num(el.value)||0):0;};
@@ -932,9 +934,11 @@ function recalcFuel(){const g=id=>{const el=document.getElementById(id);return e
   recalcTotal();}
 function recalcTotal(){const g=id=>{const el=document.getElementById(id);return el?(num(el.value)||0):0;};
   const keys=['b_chTransport','b_chFuel','b_chPacking','b_chBulky','b_chStairs','b_chElevator','b_chLongCarry','b_chShuttle','b_chSIT','b_chStgHandling','b_chExtraLabor','b_chExtraStop','b_chWaiting','b_chConvPGS','b_chRedelivery','b_chBinding','b_chOther'];
-  const sum=keys.reduce((t,k)=>t+g(k),0);
+  let sum=keys.reduce((t,k)=>t+g(k),0);
+  document.querySelectorAll('#customCharges .ccrow').forEach(r=>{sum+=num(r.querySelector('.ccamt').value)||0;});
   const ct=document.getElementById('b_chTotal');if(ct)ct.value=(Math.round(sum*100)/100).toFixed(2);
   recalcBalance();}
+function addCustomCharge(label,amt){const box=document.getElementById('customCharges');if(!box)return;const d=document.createElement('div');d.className='ccrow chrow';d.innerHTML='<span><input class="cclabel" value="'+esc(label||'')+'" placeholder="charge description" style="width:230px;padding:4px 6px"></span><span class="ce"><input class="ccamt mny" value="'+(amt!=null?esc(amt):'')+'" placeholder="$" oninput="recalcTotal()" style="width:110px"><button type="button" class="padclear" onclick="this.closest(\'.ccrow\').remove();recalcTotal()">✕</button></span>';box.appendChild(d);recalcTotal();}
 function recalcBalance(){const g=id=>{const el=document.getElementById(id);return el?(num(el.value)||0):0;};
   const ct=document.getElementById('b_chTotal'),ref=document.getElementById('b_payTotalRef');if(ct&&ref)ref.value=ct.value;
   const bal=g('b_chTotal')-g('b_payDiscount')-g('b_payDeposit')-g('b_payOrigin');
@@ -1034,6 +1038,7 @@ function generateBOL(id){const v=s=>{const el=document.getElementById(s);return 
     fullPack:(v('b_fullPack')==='Yes'),fullPackChoice:v('b_fullPack'),packCf:v('b_packCf'),packRateCf:v('b_packRateCf'),packLabor:v('b_packLabor'),packMatTotal:v('b_packMatTotal'),packMaterials:[...document.querySelectorAll('#matRows .matrow')].map(r=>{const sel=r.querySelector('.matSel'),o=sel.selectedOptions[0];const name=sel.value,price=+((o&&o.dataset.price)||0),qty=num(r.querySelector('.matQty').value)||0;return (name&&qty)?{name:name,price:price,qty:qty,total:Math.round(price*qty*100)/100}:null;}).filter(Boolean),materialsNote:v('b_materialsNote'),packTotal:v('b_packTotal'),
     storage:(v('b_storage')==='Yes'),storageChoice:v('b_storage'),storageStart:v('b_storageStart'),storageEnd:v('b_storageEnd'),ttAccess:(v('b_ttAccess')==='Tractor-trailer access available'),ttAccessChoice:v('b_ttAccess'),dwellingO:v('b_dwellingO'),dwellingD:v('b_dwellingD'),walkupFlights:v('b_walkupFlights'),accessDenied:ck('b_accessDenied'),accessExplain:v('b_accessExplain'),
     exceptions:v('b_exceptions'),originAmt:v('b_payOrigin'),
+    customCharges:[...document.querySelectorAll('#customCharges .ccrow')].map(r=>({label:r.querySelector('.cclabel').value.trim(),amt:r.querySelector('.ccamt').value.trim()})).filter(c=>num(c.amt)),
     sigs:st.ack,consent:true,custSig:cust,foreSig:fore,signed:true,signedAt:now(),device:(navigator.userAgent||'').slice(0,70),geo:window._geo||null});
   job.bol=bol;saveJob(job);renderBOLDone(id);}
 function renderBOLDone(id){const job=getJob(id);const e=job.est||{},b=job.bol||{};const valLbl=b.valuation==='full'?'Option 1 — Full Value Protection':'Option 2 — Waiver (60¢/lb)';
@@ -1059,7 +1064,30 @@ function backendPayload(job){const e=job.est||{},b=job.bol||{};const oc=parseCSZ
   // AS-22 total = ONLY the accessorial services that have a row on that page (not packing/bulky/conv/binding/other, which live on the BOL face)
   const accKeys=['chStairs','chElevator','chLongCarry','chShuttle','chSIT','chStgHandling','chExtraLabor','chExtraStop','chWaiting','chRedelivery'];
   const chAccTotal=accKeys.reduce((t,k)=>t+(num(b[k])||0),0);
+  // ----- dynamic, itemized charge lines for the generated BOL (one line per fee, any number) -----
+  const Lc=loc=>(loc&&loc!=='—')?loc:'';
+  const charges=[];
+  const add=(label,amt,detail)=>{if((num(amt)||0)!==0)charges.push({label:label,amount:(num(amt)||0).toFixed(2),detail:detail||''});};
+  add('Transportation',b.chTransport,(e.volume?e.volume+' cu ft':'')+(e.rate?' @ $'+e.rate+'/cf':''));
+  add('Fuel surcharge',b.chFuel,(b.fuelPct?b.fuelPct+'%':''));
+  add('Packing labor & materials',b.chPacking,(b.fullPack&&b.packRateCf?'$'+b.packRateCf+'/cf':''));
+  add('Bulky articles',b.chBulky,'');
+  add('Stairs',b.chStairs,Lc(b.locStairs));
+  add('Elevator',b.chElevator,Lc(b.locElevator));
+  add('Long carry',b.chLongCarry,Lc(b.locLongCarry));
+  add('Shuttle',b.chShuttle,Lc(b.locShuttle));
+  add('Storage in transit (SIT)',b.chSIT,Lc(b.locSIT));
+  add('Storage handling',b.chStgHandling,Lc(b.locStgHandling));
+  add('Extra labor',b.chExtraLabor,Lc(b.locExtraLabor));
+  add('Extra stop',b.chExtraStop,Lc(b.locExtraStop));
+  add('Waiting time / overnight',b.chWaiting,Lc(b.locWaiting));
+  add('Convenience fee + PGS delivery',b.chConvPGS,'');
+  add('Redelivery',b.chRedelivery,'');
+  add(((b.chOtherDesc||'Other').replace(/\s*\$[\d,]+\.?\d*/g,'').trim()||'Other'),b.chOther,'');
+  (b.customCharges||[]).forEach(cc=>{if(cc&&(num(cc.amt)||0)!==0)charges.push({label:(cc.label||'Other charge'),amount:(num(cc.amt)||0).toFixed(2),detail:''});});
+  const payment={total:b.chTotal,discount:b.payDiscount,deposit:b.payDeposit,originPayment:b.payOrigin,balanceDest:b.payBalanceDest,balance30:b.payBalance30};
   return {van:b.vanNo,order:b.order||job.id,agreedPickup:b.agreedPickup,actualPickup:b.actualPickup,firstAvail:b.firstAvail,deliverNoLater:b.deliverNoLater,
+    charges:charges,payment:payment,declaredValue:b.declaredValue,exceptions:b.exceptions,method:b.method,custSig:b.custSig,foreSig:b.foreSig,
     oName:b.oName,oStreet:b.oStreet,oCity:oc.city,oState:oc.state,oZip:oc.zip,oPhone:b.oPhone,
     dName:b.dName,dStreet:b.dStreet,dCity:dc.city,dState:dc.state,dZip:dc.zip,dPhone:b.dPhone,
     enrouteName:b.enrouteName,enroutePhone:b.enroutePhone,valuation:b.valuation,
