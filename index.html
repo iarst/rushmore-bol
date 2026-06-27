@@ -865,6 +865,7 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      <button type="button" class="ghost sm" onclick="addCustomCharge()" style="margin:6px 0 2px">+ Add custom charge line</button>
      <p class="muted" style="margin:6px 0 2px;font-size:11.5px">The total auto-adds every line above so it always matches. Use <b>+ Add custom charge line</b> for any fee that isn't listed — it prints as its own line on the Bill of Lading.</p>
      <div class="chrow tot"><span>TOTAL APPLICABLE CHARGES <span class="muted">(auto)</span></span><input id="b_chTotal" class="mny big" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" readonly style="background:#eef3f9;font-weight:800"></div>
+     <div class="chrow"><span>Discount <span class="muted">(deducted from total)</span></span><input id="b_payDiscount" class="mny" value="${(s.payDiscount!==''&&s.payDiscount!=null)?esc(s.payDiscount):''}" oninput="recalcBalance()" placeholder="$"></div>
      <div class="subh">Special delivery (AS-22) <span class="tag tag-b">EXTRA</span></div>
      <div class="twocol tb"><div class="f"><label class="fl">Expedited — deliver on/before</label><input type="date" id="b_expeditedDate" value="${esc(s.expeditedDate)}"></div>
        <div class="f"><label class="fl">Stair flights (beyond 1st)</label><input id="b_stairsFlights" value="${esc(s.stairsFlights)}"></div>
@@ -872,9 +873,8 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
    <div class="sigblock" id="sig_accessorial"></div>
 
    <div class="bolsec"><h4><span class="step">6</span> Payment schedule</h4>
-     <div class="ackbox">Total applicable charges − discount = <b>total charges (less discounts)</b>. Net − deposit − origin payment = <b>balance due at delivery</b> (calculated automatically). Enter the <b>origin payment collected at pickup</b>.</div>
+     <div class="ackbox">Total applicable charges − discount (entered in the charges section above) = <b>total charges (less discounts)</b>. Net − deposit − origin payment = <b>balance due at delivery</b> (calculated automatically). Enter the <b>origin payment collected at pickup</b>.</div>
      <div class="chrow"><span>Total applicable charges</span><input id="b_payTotalRef" class="mny" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" readonly style="background:#f3f6fb"></div>
-     <div class="chrow"><span>Discount</span><input id="b_payDiscount" class="mny" value="${(s.payDiscount!==''&&s.payDiscount!=null)?esc(s.payDiscount):''}" oninput="recalcBalance()" placeholder="$"></div>
      <div class="chrow"><span><b>Total charges (less discounts)</b></span><input id="b_payNet" class="mny" value="" readonly style="background:#f3f6fb;font-weight:700"></div>
      <div class="chrow"><span>Prepaid deposit (paid at booking)</span><input id="b_payDeposit" class="mny" value="${(s.payDeposit!==''&&s.payDeposit!=null)?esc(s.payDeposit):''}" oninput="recalcBalance()" placeholder="$"></div>
      <div class="chrow tr"><span>💵 Origin payment collected (at pickup) <span class="req">*</span><span class="tag tag-r">REQUIRED</span></span><input id="b_payOrigin" class="mny" value="${(s.payOrigin!==''&&s.payOrigin!=null)?esc(s.payOrigin):''}" oninput="recalcBalance()" placeholder="$"></div>
