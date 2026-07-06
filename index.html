@@ -111,6 +111,11 @@
   .miss{border-color:var(--bad)!important;box-shadow:0 0 0 3.5px rgba(215,0,21,.18)!important;background:#fff6f6}
   .twocol{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 16px} @media(max-width:640px){.twocol{grid-template-columns:1fr}}
   .chk{display:flex;gap:9px;align-items:flex-start;font-size:14px;margin:7px 0} .chk input{width:auto;margin-top:3px}
+  .drop{border:1.5px dashed #c6c6c8;border-radius:14px;background:#fafaf8;padding:24px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+  .drop:hover,.drop.over{border-color:#D9A800;background:#FFFBEB}
+  .drop .dt{font-weight:700;color:var(--navy)} .drop .dd{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .ordiv{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.5px;margin:16px 0}
+  .ordiv:before,.ordiv:after{content:'';flex:1;border-top:1px solid rgba(0,0,0,.08)}
   .padwrap{position:relative;margin-top:4px}
   .pad{border:1.5px dashed #c6c6c8;border-radius:14px;background:#fafaf8;touch-action:none;width:100%;height:150px;display:block}
   .padclear{position:absolute;top:8px;right:10px;font-size:12px;padding:4px 11px;background:rgba(0,0,0,.05);color:var(--navy)}
@@ -527,7 +532,7 @@ function szLine(j){const s=origSZ(j);return s?`<div style="font-weight:700;color
 function newRow(j){return `<div class="jobrow newrow" onclick="openJob('${j.id}')">
     <div class="agtime" style="color:#9A6A00;min-width:96px">📅 ${shortPick(j)}${szLine(j)}</div>
     <div style="flex:1"><div class="id">${j.id} · ${esc(j.est?.customer)||'—'}</div>
-      <div class="meta">${esc((j.est?.oAddr||'').split(',')[1]||j.est?.oAddr||'')} → ${esc((j.est?.dAddr||'').split(',')[1]||j.est?.dAddr||'')}${j.est?.miles?' · '+esc(j.est.miles)+' mi':''}${j.source==='inbox'?' · <span style="color:#1D9E75">📥 estimates@</span>':''}</div></div>
+      <div class="meta">${esc((j.est?.oAddr||'').split(',')[1]||j.est?.oAddr||'')} → ${esc((j.est?.dAddr||'').split(',')[1]||j.est?.dAddr||'')}${j.est?.miles?' · '+esc(j.est.miles)+' mi':''}${j.source==='inbox'?' · <span style="color:#1D9E75">📥 estimates@</span>':j.source==='upload'?' · <span style="color:#0058B0">📄 uploaded</span>':''}</div></div>
     <div class="right"><span class="pill p-new">NEW</span></div></div>`;}
 function vDashboard(){
   const all=store.get().slice().sort((a,b)=>{const ka=firstPickupKey(a),kb=firstPickupKey(b);return ka!==kb?(ka<kb?-1:1):(fmWinOrder(a.eta&&a.eta.window)-fmWinOrder(b.eta&&b.eta.window));});
@@ -565,11 +570,33 @@ async function checkInbox(btn){
 function vIntake(){
   return `<div class="modebar">OFFICE</div><div class="steps"><span class="s on">1. Intake</span><span class="s">2. Assign foreman</span><span class="s">3. Pickup window</span></div>
     <div class="card"><h2>1 · Estimate intake</h2><p class="sub">Signed broker estimates forwarded to <b>estimates@rushmorevanlines.com</b> are read automatically — including the full itemized inventory, extra services and customer notes — and land on the dispatch board. Use <b>🔄 Refresh</b> on the board to pull them in right away.</p>
-    <p class="sub">Need to enter one by hand? Paste the estimate text below.</p>
-    <label class="fl">Paste estimate text (optional)</label><textarea id="estText" rows="10" placeholder="Paste a broker estimate here only if entering manually…"></textarea>
+    <label class="fl">Upload an estimate PDF</label>
+    <div id="updrop" class="drop" onclick="document.getElementById('upfile').click()"
+      ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="dropEst(event)">
+      <div class="dt">📄 Drop the estimate PDF here</div><div class="dd">or click to choose a file — it's parsed exactly like an emailed estimate (inventory, services, charges)</div></div>
+    <input type="file" id="upfile" accept="application/pdf,.pdf" style="display:none" onchange="uploadEst(this.files[0]);this.value=''">
+    <div id="upmsg" class="muted" style="margin-top:8px"></div>
+    <div class="ordiv">OR PASTE TEXT</div>
+    <label class="fl">Paste estimate text</label><textarea id="estText" rows="10" placeholder="Paste a broker estimate here only if entering manually…"></textarea>
     <div class="btnrow"><button class="ghost" onclick="goOffice()">← Back to board</button>
     <button onclick="doExtract()">Create job from pasted text →</button></div></div>`;}
 function doExtract(){const e=extract($('#estText').value);if(!e.job){alert('No job number found — paste a fuller estimate or use the sample.');return;}cur.est=e;cur.id=e.job;cur.status='New';saveJob(cur);render('job');}
+function dropEst(ev){ev.preventDefault();const d=document.getElementById('updrop');d.classList.remove('over');const f=ev.dataTransfer.files&&ev.dataTransfer.files[0];if(f)uploadEst(f);}
+async function uploadEst(f){
+  if(!f)return;
+  if(!/\.pdf$/i.test(f.name)){alert('Please choose a PDF estimate.');return;}
+  const msg=document.getElementById('upmsg');
+  msg.innerHTML='⏳ Uploading &amp; parsing <b>'+esc(f.name)+'</b>…';
+  try{
+    const fd=new FormData();fd.append('file',f,f.name);
+    const r=await fetch(BACKEND+'/estimates/upload',{method:'POST',body:fd});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||!d.ok)throw new Error((d&&d.error)||('HTTP '+r.status));
+    msg.textContent='';
+    if(d.dupe){alert('Job '+d.job.id+' is already on the board — opening it.');if(!getJob(d.job.id))saveJob(d.job);openJob(d.job.id);return;}
+    saveJob(d.job);openJob(d.job.id);
+  }catch(e){msg.textContent='';alert('Upload failed: '+e.message+'\n(The backend may be waking up — wait ~40s and try again.)');}
+}
 function vJob(){
   const j=cur,e=j.est,fm=foremenStore.get();
   const opts=fm.map((f,i)=>`<option value="${i}">${esc(f.name)} — ${esc(f.email)}</option>`).join('');
