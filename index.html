@@ -298,6 +298,8 @@ function vDashboard(){
 }
 function importJobs(list){let n=0;(list||[]).forEach(j=>{if(!j||!j.id)return;const ex=getJob(j.id);
   if(!ex){saveJob(j);n++;}
+  else if(j.created&&ex.created&&String(j.created).includes('T')&&String(ex.created).includes('T')&&j.created>ex.created){saveJob(j);n++;} // board was reset / re-ingested — the remote copy is the fresh one
+  else if((j.reparsed||'')>(ex.reparsed||'')){ex.est=j.est;ex.reparsed=j.reparsed;saveJob(ex);n++;}   // estimate was re-parsed on the server
   else if(!ex.foreman&&j.est&&j.est.inv&&!(ex.est&&ex.est.inv)){ex.est=j.est;saveJob(ex);n++;}});return n;}
 async function checkInbox(btn){
   const o=btn.textContent;btn.textContent='⏳ Refreshing…';btn.disabled=true;
