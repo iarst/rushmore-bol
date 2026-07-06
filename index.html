@@ -114,6 +114,10 @@
   .drop{border:1.5px dashed #c6c6c8;border-radius:14px;background:#fafaf8;padding:24px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
   .drop:hover,.drop.over{border-color:#D9A800;background:#FFFBEB}
   .drop .dt{font-weight:700;color:var(--navy)} .drop .dd{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .drop.busy{border-style:solid;border-color:#D9A800;background:#FFFBEB;pointer-events:none;animation:dropPulse 1.1s ease-in-out infinite}
+  .drop.busy .dt{color:var(--golddk);font-size:17px} .drop.busy .dd{color:#6B5500;font-weight:600}
+  @keyframes dropPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,199,0,0)}50%{box-shadow:0 0 0 9px rgba(255,199,0,.28)}}
+  .pad.padsm{height:80px}
   .ordiv{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.5px;margin:16px 0}
   .ordiv:before,.ordiv:after{content:'';flex:1;border-top:1px solid rgba(0,0,0,.08)}
   .padwrap{position:relative;margin-top:4px}
@@ -582,20 +586,25 @@ function vIntake(){
     <button onclick="doExtract()">Create job from pasted text →</button></div></div>`;}
 function doExtract(){const e=extract($('#estText').value);if(!e.job){alert('No job number found — paste a fuller estimate or use the sample.');return;}cur.est=e;cur.id=e.job;cur.status='New';saveJob(cur);render('job');}
 function dropEst(ev){ev.preventDefault();const d=document.getElementById('updrop');d.classList.remove('over');const f=ev.dataTransfer.files&&ev.dataTransfer.files[0];if(f)uploadEst(f);}
+function dropReset(){const d=document.getElementById('updrop');if(!d)return;d.classList.remove('busy');
+  d.querySelector('.dt').textContent='📄 Drop the estimate PDF here';
+  d.querySelector('.dd').textContent="or click to choose a file — it's parsed exactly like an emailed estimate (inventory, services, charges)";}
 async function uploadEst(f){
   if(!f)return;
   if(!/\.pdf$/i.test(f.name)){alert('Please choose a PDF estimate.');return;}
-  const msg=document.getElementById('upmsg');
-  msg.innerHTML='⏳ Uploading &amp; parsing <b>'+esc(f.name)+'</b>…';
+  const drop=document.getElementById('updrop');
+  drop.classList.add('busy');
+  drop.querySelector('.dt').innerHTML='⏳ Uploading &amp; parsing <b>'+esc(f.name)+'</b>';
+  drop.querySelector('.dd').textContent='Reading customer, inventory, services and charges — a few seconds…';
   try{
     const fd=new FormData();fd.append('file',f,f.name);
     const r=await fetch(BACKEND+'/estimates/upload',{method:'POST',body:fd});
     const d=await r.json().catch(()=>({}));
     if(!r.ok||!d.ok)throw new Error((d&&d.error)||('HTTP '+r.status));
-    msg.textContent='';
+    dropReset();
     if(d.dupe){alert('Job '+d.job.id+' is already on the board — opening it.');if(!getJob(d.job.id))saveJob(d.job);openJob(d.job.id);return;}
     saveJob(d.job);openJob(d.job.id);
-  }catch(e){msg.textContent='';alert('Upload failed: '+e.message+'\n(The backend may be waking up — wait ~40s and try again.)');}
+  }catch(e){dropReset();alert('Upload failed: '+e.message+'\n(The backend may be waking up — wait ~40s and try again.)');}
 }
 function vJob(){
   const j=cur,e=j.est,fm=foremenStore.get();
@@ -802,7 +811,7 @@ function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);cons
     dedicatedTruck:'',expeditedDate:'',stairsFlights:'',extraLaborHrs:'',
     fullPackChoice:(_packA>0?'Yes':(e.fullPack?'Yes':'No')),packCf:(_vol||''),packRateCf:_packRate.toFixed(2),packMaterials:[],materialsNote:'',packTotal:'',
     storageChoice:'No',storageStart:'',storageEnd:'',ttAccessChoice:'Tractor-trailer access available',dwellingO:e.oType||'Private Home',dwellingD:e.dType||'Private Home',walkupFlights:'',accessDenied:false,accessExplain:'',
-    exceptions:'',customCharges:[],consent:false,custSig:'',foreSig:''},b);}
+    exceptions:'',customCharges:[],consent:false,custSig:'',foreSig:'',custPrinted:'',custInit:''},b);}
 function openBOL(id){renderBOL(id);}
 function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e=job.est||{};const p=payments(e);const s=_bolSeed=bolSeed(job);
   try{if(navigator.geolocation)navigator.geolocation.getCurrentPosition(g=>{window._geo={lat:+g.coords.latitude.toFixed(5),lng:+g.coords.longitude.toFixed(5),at:now()};},()=>{},{timeout:6000});}catch(_){}
@@ -822,11 +831,13 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
     </div>
 
    <div class="bolsec" style="border-color:var(--teal)"><h4><span class="step" style="background:var(--teal)">✍️</span> Signature setup</h4>
-     <div class="ackbox">Capture each person's signature once here. As you complete each section below, tap <b>Sign</b> on that section's acknowledgement to apply it (with its own timestamp) — just like the paper packet. <span id="sigCount" style="font-weight:700;color:var(--teal)"></span></div>
+     <div class="ackbox"><b>Verify identity first:</b> confirm the person in front of you is the customer named on the contract (<b>${esc(e.customer)||'—'}</b>), then have them print their own name below. Capture each person's signature once here; as you complete each section below, tap <b>Sign</b> on that section's acknowledgement to apply it (with its own timestamp) — just like the paper packet. <span id="sigCount" style="font-weight:700;color:var(--teal)"></span></div>
+     <div class="f tr" style="margin-bottom:10px"><label class="fl">Customer printed name — typed by the customer, must match the contract <span class="req">*</span><span class="tag tag-r">VERIFY ID</span></label><input id="b_custPrinted" value="${esc(s.custPrinted)}" placeholder="${esc(e.customer||'Full name exactly as on the estimate')}" autocomplete="off"></div>
      <label class="chk"><input type="checkbox" id="b_consent"> <span>The customer consents to sign this Bill of Lading electronically on this device. <span class="req">*</span></span></label>
      <div class="twocol" style="margin-top:8px">
        <div><div class="padlbl"><b>Customer</b> · ${esc(e.customer)}</div><div class="padwrap"><canvas class="pad" id="b_custSig"></canvas><button class="padclear" type="button" onclick="padClear('b_custSig')">Clear</button></div></div>
-       <div><div class="padlbl"><b>Foreman</b> · ${esc(job.foreman?job.foreman.name:'foreman')}</div><div class="padwrap"><canvas class="pad" id="b_foreSig"></canvas><button class="padclear" type="button" onclick="padClear('b_foreSig')">Clear</button></div></div></div></div>
+       <div><div class="padlbl"><b>Foreman</b> · ${esc(job.foreman?job.foreman.name:'foreman')}</div><div class="padwrap"><canvas class="pad" id="b_foreSig"></canvas><button class="padclear" type="button" onclick="padClear('b_foreSig')">Clear</button></div></div>
+       <div><div class="padlbl"><b>Customer initials</b> · required for Option 2 — 60¢/lb waiver</div><div class="padwrap"><canvas class="pad padsm" id="b_custInit"></canvas><button class="padclear" type="button" onclick="padClear('b_custInit')">Clear</button></div></div></div></div>
 
    <div class="bolsec"><h4><span class="step">1</span> Bill of Lading — identifiers &amp; dates</h4>
      <div class="twocol">
@@ -948,7 +959,7 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      <p class="muted" id="sigCount2" style="margin:0 0 10px"></p>
      <div class="btnrow"><button onclick="generateBOL('${job.id}')">✅ Generate signed Bill of Lading</button><button class="ghost" onclick="openFmJob('${job.id}')">Cancel</button></div>
      <p class="muted" style="margin-top:8px">All section signatures, timestamps, device &amp; (if allowed) location are captured for the audit trail. Delivery acknowledgements are signed at delivery.</p></div>`;
-  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');window._sigState={ack:{}};fillSigBlocks();((s.customCharges)||[]).forEach(c=>addCustomCharge(c.label,c.amt));recalcTotal();toggleStorage();togglePack();},30);
+  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');padSetup('b_custInit');window._sigState={ack:{}};fillSigBlocks();((s.customCharges)||[]).forEach(c=>addCustomCharge(c.label,c.amt));recalcTotal();toggleStorage();togglePack();},30);
   window.scrollTo(0,0);
 }
 function recalcFuel(){const g=id=>{const el=document.getElementById(id);return el?(num(el.value)||0):0;};
@@ -1044,11 +1055,24 @@ function generateBOL(id){const v=s=>{const el=document.getElementById(s);return 
   // conditional: packing rate per cf when full packing = Yes
   if(v('b_fullPack')==='Yes')need('b_packRateCf','packing rate per cu ft');
   if(!val)miss.push('valuation option');if(!ck('b_consent'))miss.push('customer consent');
+  const printed=v('b_custPrinted').trim();
+  if(!printed)miss.push('customer printed name (verify identity against the contract)');
+  const init=padData('b_custInit');
+  if(val==='waiver'&&!init)miss.push('customer initials (required for Option 2 — 60¢/lb waiver)');
   let sigMiss=0;SIGPTS.forEach(pt=>pt.who.forEach(w=>{if(!(st.ack[pt.key]&&st.ack[pt.key][w]))sigMiss++;}));
   if(sigMiss)miss.push(sigMiss+' signature(s) still needed');
   if(miss.length){const f=document.querySelector('.miss');if(f)f.scrollIntoView({behavior:'smooth',block:'center'});alert('Please complete the required fields:\n• '+miss.join('\n• '));return;}
   const cust=padData('b_custSig'),fore=padData('b_foreSig');
   const job=getJob(id);if(!job)return;
+  // identity check: printed name should match the customer on the contract
+  const contractName=((job.est||{}).customer||'').trim();
+  if(contractName){
+    const norm=s=>s.toLowerCase().replace(/[^a-z ]/g,'').replace(/\s+/g,' ').trim();
+    const a=norm(printed),c=norm(contractName);
+    if(a!==c&&!a.includes(c)&&!c.includes(a)&&!c.split(' ').some(t=>t.length>2&&a.includes(t))){
+      if(!confirm('⚠ IDENTITY CHECK\n\nPrinted name "'+printed+'" does not match the customer on the contract ("'+contractName+'").\n\nMake sure the person signing IS the contract customer (or their authorized representative).\n\nContinue anyway?'))return;
+    }
+  }
   const bol=Object.assign({},_bolSeed||{},{
     usdot:v('b_usdot'),mc:v('b_mc'),order:v('b_order'),interliner:v('b_interliner'),
     agreedPickup:v('b_agreedPickup'),actualPickup:v('b_actualPickup'),firstAvail:v('b_firstAvail'),deliverNoLater:v('b_deliverNoLater'),
@@ -1065,7 +1089,7 @@ function generateBOL(id){const v=s=>{const el=document.getElementById(s);return 
     storage:(v('b_storage')==='Yes'),storageChoice:v('b_storage'),storageStart:v('b_storageStart'),storageEnd:v('b_storageEnd'),ttAccess:(v('b_ttAccess')==='Tractor-trailer access available'),ttAccessChoice:v('b_ttAccess'),dwellingO:v('b_dwellingO'),dwellingD:v('b_dwellingD'),walkupFlights:v('b_walkupFlights'),accessDenied:ck('b_accessDenied'),accessExplain:v('b_accessExplain'),
     exceptions:v('b_exceptions'),originAmt:v('b_payOrigin'),
     customCharges:[...document.querySelectorAll('#customCharges .ccrow')].map(r=>({label:r.querySelector('.cclabel').value.trim(),amt:r.querySelector('.ccamt').value.trim()})).filter(c=>num(c.amt)),
-    sigs:st.ack,consent:true,custSig:cust,foreSig:fore,signed:true,signedAt:now(),device:(navigator.userAgent||'').slice(0,70),geo:window._geo||null});
+    sigs:st.ack,consent:true,custSig:cust,foreSig:fore,custPrinted:printed,custInit:init||'',signed:true,signedAt:now(),device:(navigator.userAgent||'').slice(0,70),geo:window._geo||null});
   job.bol=bol;saveJob(job);renderBOLDone(id);}
 function renderBOLDone(id){const job=getJob(id);const e=job.est||{},b=job.bol||{};const valLbl=b.valuation==='full'?'Option 1 — Full Value Protection':'Option 2 — Waiver (60¢/lb)';
   $('#app').innerHTML=`<div class="modebar">FOREMAN PORTAL</div>
@@ -1117,7 +1141,7 @@ function backendPayload(job){const e=job.est||{},b=job.bol||{};const oc=parseCSZ
   const payment={total:b.chTotal,discount:b.payDiscount,deposit:b.payDeposit,originPayment:b.payOrigin,balanceDest:b.payBalanceDest,balance30:b.payBalance30,priceAdj:b.payPriceAdj,destination:b.payDestination};
   const valuationAmt=(b.valuation==='full')?(b.fvpEstimate||b.declaredValue||''):'0.00';
   return {van:b.vanNo,order:b.order||job.id,agreedPickup:b.agreedPickup,actualPickup:b.actualPickup,firstAvail:b.firstAvail,deliverNoLater:b.deliverNoLater,
-    charges:charges,payment:payment,declaredValue:b.declaredValue,valuationAmt:valuationAmt,exceptions:b.exceptions,method:b.method,custSig:b.custSig,foreSig:b.foreSig,signedAt:b.signedAt,
+    charges:charges,payment:payment,declaredValue:b.declaredValue,valuationAmt:valuationAmt,exceptions:b.exceptions,method:b.method,custSig:b.custSig,foreSig:b.foreSig,custPrinted:b.custPrinted,signedAt:b.signedAt,
     oName:b.oName,oStreet:b.oStreet,oCity:oc.city,oState:oc.state,oZip:oc.zip,oPhone:b.oPhone,
     dName:b.dName,dStreet:b.dStreet,dCity:dc.city,dState:dc.state,dZip:dc.zip,dPhone:b.dPhone,
     enrouteName:b.enrouteName,enroutePhone:b.enroutePhone,valuation:b.valuation,
@@ -1133,7 +1157,7 @@ function backendPayload(job){const e=job.est||{},b=job.bol||{};const oc=parseCSZ
     ttAccess:b.ttAccess,storage:b.storage,dwellingO:b.dwellingO,volume:e.volume,rate:e.rate,packTotal:b.packTotal,
     sigs:{valuation:sg('valuation','cust'),documents:sg('documents','cust'),bolReceipt_cust:sg('bolReceipt','cust'),bolReceipt_carrier:sg('bolReceipt','carrier'),
       pickup_cust:sg('pickup','cust'),pickup_carrier:sg('pickup','carrier'),accessorial_cust:sg('accessorial','cust'),accessorial_carrier:sg('accessorial','carrier'),
-      ldf:sg('ldf','cust'),pms_cust:sg('pms','cust'),pms_carrier:sg('pms','carrier')}};}
+      ldf:sg('ldf','cust'),pms_cust:sg('pms','cust'),pms_carrier:sg('pms','carrier'),valuationInitials:(b.valuation==='waiver'?(b.custInit||''):'')}};}
 function generateOfficialBOL(id){const job=getJob(id);if(!job||!job.bol){alert('Sign the Bill of Lading first.');return;}
   // open the new window NOW, inside the click, so the popup blocker allows it; fill it once the PDF is ready
   const w=window.open('','_blank');
@@ -1148,7 +1172,7 @@ function openBOLDoc(id){renderBOLDoc(id);}
 function bolMoney(x){return money(num(x)||0);}
 function sigLabelDoc(b,key){if(key==='valuation')return 'Valuation election — '+(b.valuation==='full'?'Option 1, Full Value':'Option 2, 60¢/lb waiver');const pt=SIGPTS.find(p=>p.key===key);return pt?pt.label:key;}
 function docSig(b,key){const pt=SIGPTS.find(p=>p.key===key);if(!pt)return '';const a=(b.sigs||{})[key]||{};
-  return `<div class="docack"><div class="dackt"><b>${esc(sigLabelDoc(b,key))}.</b> ${esc(SIG_TEXT[key]||'')}</div><div class="docsigs">${pt.who.map(w=>{const sg=a[w];const who=w==='cust'?"Customer's signature &amp; date":"Carrier / foreman signature &amp; date";return `<div class="docsig">${sg?`<img src="${sg.img}">`:'<div style="height:44px"></div>'}<div class="docsigln">${who}${sg?' · '+esc(sg.ts):''}</div></div>`;}).join('')}</div></div>`;}
+  return `<div class="docack"><div class="dackt"><b>${esc(sigLabelDoc(b,key))}.</b> ${esc(SIG_TEXT[key]||'')}</div><div class="docsigs">${pt.who.map(w=>{const sg=a[w];const who=w==='cust'?("Customer's signature &amp; date"+(b.custPrinted?' — printed name: '+esc(b.custPrinted):'')):"Carrier / foreman signature &amp; date";return `<div class="docsig">${sg?`<img src="${sg.img}">`:'<div style="height:44px"></div>'}<div class="docsigln">${who}${sg?' · '+esc(sg.ts):''}</div></div>`;}).join('')}</div></div>`;}
 function renderBOLDoc(id){const j=getJob(id);if(!j||!j.bol){goForeman();return;}const e=j.est||{},b=j.bol;
   const back=getFm()?`openFmJob('${id}')`:`openJob('${id}')`;
   const acc=[['Stairs',b.locStairs,b.chStairs],['Elevator',b.locElevator,b.chElevator],['Long carry',b.locLongCarry,b.chLongCarry],['Shuttle',b.locShuttle,b.chShuttle],['Storage in transit',b.locSIT,b.chSIT],['Storage handling',b.locStgHandling,b.chStgHandling],['Extra labor',b.locExtraLabor,b.chExtraLabor],['Extra stop',b.locExtraStop,b.chExtraStop],['Waiting / overnight',b.locWaiting,b.chWaiting]];
@@ -1162,7 +1186,7 @@ function renderBOLDoc(id){const j=getJob(id);if(!j||!j.bol){goForeman();return;}
        <div class="f"><label class="fl">Origin</label><span class="v">${esc(b.oName||e.customer)}</span><span>${esc(b.oStreet)}, ${esc(b.oCSZ)}</span><span class="muted">${esc(b.oPhone||'')}</span></div>
        <div class="f"><label class="fl">Destination</label><span class="v">${esc(b.dName||e.customer)}</span><span>${esc(b.dStreet)}, ${esc(b.dCSZ)}</span><span class="muted">${esc(b.dPhone||'')}</span></div></div>
      <h3 class="sg" style="margin-top:14px">Valuation</h3>
-     <div class="note">${b.valuation==='full'?'Option 1 — Full (Replacement) Value Protection'+(num(b.declaredValue)?' · declared value '+bolMoney(b.declaredValue):''):'Option 2 — Waiver, Released Value 60¢ / lb per article'}</div>
+     <div class="note">${b.valuation==='full'?'Option 1 — Full (Replacement) Value Protection'+(num(b.declaredValue)?' · declared value '+bolMoney(b.declaredValue):''):'Option 2 — Waiver, Released Value 60¢ / lb per article'+(b.custInit?' · initialed by customer <img src="'+b.custInit+'" style="height:22px;vertical-align:middle;border-bottom:1px solid #9a9aa0">':'')}</div>
      ${docSig(b,'valuation')}
      <h3 class="sg" style="margin-top:6px">Services &amp; charges</h3>
      <table class="doctbl"><tbody>
