@@ -871,18 +871,33 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
    <div class="bolsec"><h4><span class="step">4</span> Valuation — customer must choose <span class="req">*</span></h4>
      <div class="optrow">
        <label class="opt ${s.valuation==='full'?'sel':''}" onclick="bolSel(this)"><input type="radio" name="b_val" value="full" ${s.valuation==='full'?'checked':''}><div><div class="ot">Option 1 — Full (Replacement) Value Protection</div><div class="od">Most coverage; valuation charge may apply. Customer may declare a higher value below.</div></div></label>
-       <label class="opt ${s.valuation==='waiver'?'sel':''}" onclick="bolSel(this)"><input type="radio" name="b_val" value="waiver" ${s.valuation==='waiver'?'checked':''}><div><div class="ot">Option 2 — Waiver, Released Value 60¢ / lb per article</div><div class="od">Minimal protection at no extra cost. Customer initials this election at signing.</div></div></label></div>
+       <label class="opt ${s.valuation==='waiver'?'sel':''}" onclick="bolSel(this)"><input type="radio" name="b_val" value="waiver" ${s.valuation==='waiver'?'checked':''}><div><div class="ot">Option 2 — Waiver, Released Value 60¢ / lb per article</div><div class="od"><b>This is NOT insurance.</b> If an item is lost or damaged, the carrier's maximum liability is <b>60 cents × the item's weight in pounds</b> — a 10 lb item = $6.00 maximum, no matter what it's actually worth. No extra cost. The customer must <b>initial AND sign</b> to agree to this lower protection.</div></div></label></div>
      <div class="twocol" style="margin-top:8px">
        <div class="f"><label class="fl">Declared total value (Option 1)</label><input id="b_declaredValue" value="${esc(s.declaredValue)}" placeholder="$"></div>
        <div class="f"><label class="fl">FVP cost estimate (carrier)</label><input id="b_fvpEstimate" value="${esc(s.fvpEstimate)}" placeholder="$"></div></div></div>
    <div class="sigblock" id="sig_valuation"></div>
 
-   <div class="bolsec"><h4><span class="step">5</span> Services &amp; charges</h4>
+   <div class="bolsec"><h4><span class="step">5</span> Services, charges &amp; payment</h4>
      <div class="ty" style="margin-bottom:8px"><div class="muted" style="margin:0 0 4px"><span class="tag tag-y">AUTO</span> Base charges — from the estimate</div>
      <div class="chrow"><span>Transportation (${e.volume} cf @ $${e.rate})</span><input id="b_chTransport" class="mny" value="${(s.chTransport!==''&&s.chTransport!=null)?esc(s.chTransport):''}" oninput="recalcFuel()" placeholder="$"></div>
      <div class="chrow"><span>Fuel surcharge (<input id="b_fuelPct" value="${esc(s.fuelPct)}" oninput="recalcFuel()" style="width:46px;padding:4px 6px;text-align:right;display:inline-block">% — auto)</span>${A('b_chFuel',s.chFuel)}</div></div>
      <div class="tb"><div class="muted" style="margin:0 0 4px"><span class="tag tag-b">EXTRA</span> Accessorials — fill only the services actually ordered/performed</div>
      ${chr('Packing labor &amp; materials','b_chPacking',s.chPacking)}
+     <div style="border:1.5px dashed rgba(78,122,69,.45);border-radius:12px;padding:10px 14px;margin:2px 0 10px;background:#F7FAF4">
+       <div class="subh" style="margin-top:0">Packing &amp; bulky detail (PMS-19) — fills the line above <span class="tag tag-r">REQUIRED</span></div>
+       <div class="f"><label class="fl">Full packing performed? <span class="req">*</span></label><select id="b_fullPack" onchange="togglePack()"><option value="">Select…</option><option ${s.fullPackChoice==='Yes'?'selected':''}>Yes</option><option ${s.fullPackChoice==='No'?'selected':''}>No</option></select></div>
+       ${bulkyList(e).length?`<div class="muted" style="margin:6px 0;color:#7a5200">⚠ Bulky from inventory: ${esc(bulkyList(e).join(' · '))}</div>`:''}
+       <div id="packDetail" style="display:none">
+         <div class="twocol"><div class="f"><label class="fl">Job volume (cu ft)</label><input id="b_packCf" class="mny" value="${esc(s.packCf)}" oninput="recalcPack()" placeholder="cf"></div>
+         <div class="f"><label class="fl">Packing rate ($ per cu ft) <span class="req">*</span></label><input id="b_packRateCf" class="mny" value="${esc(s.packRateCf)}" oninput="recalcPack()" placeholder="$/cf"></div></div>
+         <div class="chrow"><span>Packing labor (volume × rate)</span><input id="b_packLabor" class="mny" readonly style="background:#f5f5f2"></div>
+         <div class="subh" style="margin-top:10px">Extra materials</div>
+         <div id="matRows"></div>
+         <button type="button" class="ghost sm" onclick="addMatRow()" style="margin:4px 0 2px">+ Add material</button>
+         <div class="chrow"><span>Materials subtotal</span><input id="b_packMatTotal" class="mny" readonly style="background:#f5f5f2"></div>
+         <div class="chrow tot"><span>TOTAL PACKING &amp; MATERIALS <span class="muted">(auto → line above)</span></span><input id="b_packTotal" class="mny big" readonly style="background:#f0f2e9;font-weight:800"></div>
+         <div class="f"><label class="fl">Materials / notes</label><input id="b_materialsNote" value="${esc(s.materialsNote)}" placeholder="anything not in the list above"></div></div>
+     </div>
      ${chr('Bulky articles','b_chBulky',s.chBulky)}
      ${chrL('Stairs','b_locStairs',s.locStairs,'b_chStairs',s.chStairs)}
      ${chrL('Elevator','b_locElevator',s.locElevator,'b_chElevator',s.chElevator)}
@@ -904,15 +919,8 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      <p class="muted" style="margin:6px 0 2px;font-size:11.5px">The total auto-adds every line above so it always matches. Use <b>+ Add custom charge line</b> for any fee that isn't listed — it prints as its own line on the Bill of Lading.</p>
      <div class="chrow"><span>Discount <span class="muted">(deducted before the total)</span></span><input id="b_payDiscount" class="mny" value="${(s.payDiscount!==''&&s.payDiscount!=null)?esc(s.payDiscount):''}" oninput="recalcTotal()" placeholder="$"></div>
      <div class="chrow tot"><span>TOTAL APPLICABLE CHARGES <span class="muted">(auto, after discount)</span></span><input id="b_chTotal" class="mny big" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" readonly style="background:#f0f2e9;font-weight:800"></div>
-     <div class="subh">Special delivery (AS-22) <span class="tag tag-b">EXTRA</span></div>
-     <div class="twocol tb"><div class="f"><label class="fl">Expedited — deliver on/before</label><input type="date" id="b_expeditedDate" value="${esc(s.expeditedDate)}"></div>
-       <div class="f"><label class="fl">Stair flights (beyond 1st)</label><input id="b_stairsFlights" value="${esc(s.stairsFlights)}"></div>
-       <div class="f"><label class="fl">Extra labor hours</label><input id="b_extraLaborHrs" value="${esc(s.extraLaborHrs)}"></div></div></div>
-   <div class="sigblock" id="sig_accessorial"></div>
-
-   <div class="bolsec"><h4><span class="step">6</span> Payment schedule</h4>
-     <div class="ackbox"><b>Total applicable charges</b> already has the discount deducted (in the charges section). Total − deposit − origin payment = <b>balance due at delivery</b> (calculated automatically). Enter the <b>origin payment collected at pickup</b>.</div>
-     <div class="chrow"><span>Total applicable charges <span class="muted">(after discount)</span></span><input id="b_payTotalRef" class="mny" value="${(s.chTotal!==''&&s.chTotal!=null)?esc(s.chTotal):''}" readonly style="background:#f5f5f2"></div>
+     <div class="subh" style="margin-top:14px">Payment schedule</div>
+     <div class="ackbox">Total (above, discount already deducted) − deposit − origin payment = <b>balance due at delivery</b> (calculated automatically). Enter the <b>origin payment collected at pickup</b>.</div>
      <div class="chrow"><span>Prepaid deposit (paid at booking)</span><input id="b_payDeposit" class="mny" value="${(s.payDeposit!==''&&s.payDeposit!=null)?esc(s.payDeposit):''}" oninput="recalcBalance()" placeholder="$"></div>
      <div class="chrow tr"><span>💵 Origin payment collected (at pickup) <span class="req">*</span><span class="tag tag-r">REQUIRED</span></span><input id="b_payOrigin" class="mny" value="${(s.payOrigin!==''&&s.payOrigin!=null)?esc(s.payOrigin):''}" oninput="recalcBalance()" placeholder="$"></div>
      <div class="chrow"><span><b>Balance due at delivery</b> <span class="muted">(auto)</span></span><input id="b_payBalanceDest" class="mny" value="${(s.payBalanceDest!==''&&s.payBalanceDest!=null)?esc(s.payBalanceDest):''}" readonly style="background:#e7f6ef;font-weight:800;color:#0f6e56"></div>
@@ -920,9 +928,16 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      ${chr('Destination payment','b_payDestination',s.payDestination)}
      ${chr('Balance due to carrier within 30 days','b_payBalance30',s.payBalance30)}
      <div class="f tr" style="margin-top:8px"><label class="fl">Payment method <span class="req">*</span><span class="tag tag-r">REQUIRED</span></label><select id="b_method"><option value="">Select…</option>${['Credit card','Cashiers check','Personal check','Postal money order','Cash','App'].map(o=>`<option ${s.method===o?'selected':''}>${o}</option>`).join('')}</select></div></div>
+   <div class="sigblock" id="sig_pms"></div>
    <div class="sigblock" id="sig_documents"></div>
    <div class="sigblock" id="sig_bolReceipt"></div>
    <div class="sigblock" id="sig_pickup"></div>
+
+   <div class="bolsec"><h4><span class="step">6</span> Special delivery &amp; post-contract services (AS-22) <span class="tag tag-b">EXTRA</span></h4>
+     <div class="twocol tb"><div class="f"><label class="fl">Expedited — deliver on/before</label><input type="date" id="b_expeditedDate" value="${esc(s.expeditedDate)}"></div>
+       <div class="f"><label class="fl">Stair flights (beyond 1st)</label><input id="b_stairsFlights" value="${esc(s.stairsFlights)}"></div>
+       <div class="f"><label class="fl">Extra labor hours</label><input id="b_extraLaborHrs" value="${esc(s.extraLaborHrs)}"></div></div></div>
+   <div class="sigblock" id="sig_accessorial"></div>
 
    <div class="bolsec tr"><h4><span class="step">7</span> Long-distance form (LDF-08) — access info <span class="tag tag-r">REQUIRED</span></h4>
      <p class="muted" style="margin:-4px 0 8px">Confirm the access conditions at both ends — these drive shuttle/long-carry charges and the crew plan.</p>
@@ -937,25 +952,10 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      <div class="f"><label class="fl">If yes, explain</label><input id="b_accessExplain" value="${esc(s.accessExplain)}"></div></div>
    <div class="sigblock" id="sig_ldf"></div>
 
-   <div class="bolsec tr"><h4><span class="step">8</span> Packing &amp; bulky (PMS-19) <span class="tag tag-r">REQUIRED</span></h4>
-     <div class="f"><label class="fl">Full packing performed? <span class="req">*</span></label><select id="b_fullPack" onchange="togglePack()"><option value="">Select…</option><option ${s.fullPackChoice==='Yes'?'selected':''}>Yes</option><option ${s.fullPackChoice==='No'?'selected':''}>No</option></select></div>
-     ${bulkyList(e).length?`<div class="muted" style="margin:6px 0;color:#7a5200">⚠ Bulky from inventory: ${esc(bulkyList(e).join(' · '))}</div>`:''}
-     <div id="packDetail" style="display:none">
-       <div class="twocol"><div class="f"><label class="fl">Job volume (cu ft)</label><input id="b_packCf" class="mny" value="${esc(s.packCf)}" oninput="recalcPack()" placeholder="cf"></div>
-       <div class="f"><label class="fl">Packing rate ($ per cu ft) <span class="req">*</span></label><input id="b_packRateCf" class="mny" value="${esc(s.packRateCf)}" oninput="recalcPack()" placeholder="$/cf"></div></div>
-       <div class="chrow"><span>Packing labor (volume × rate)</span><input id="b_packLabor" class="mny" readonly style="background:#f5f5f2"></div>
-       <div class="subh" style="margin-top:10px">Extra materials</div>
-       <div id="matRows"></div>
-       <button type="button" class="ghost sm" onclick="addMatRow()" style="margin:4px 0 2px">+ Add material</button>
-       <div class="chrow"><span>Materials subtotal</span><input id="b_packMatTotal" class="mny" readonly style="background:#f5f5f2"></div>
-       <div class="chrow tot"><span>TOTAL PACKING &amp; MATERIALS <span class="muted">(auto)</span></span><input id="b_packTotal" class="mny big" readonly style="background:#f0f2e9;font-weight:800"></div>
-       <div class="f"><label class="fl">Materials / notes</label><input id="b_materialsNote" value="${esc(s.materialsNote)}" placeholder="anything not in the list above"></div></div></div>
-   <div class="sigblock" id="sig_pms"></div>
-
-   <div class="bolsec"><h4><span class="step">9</span> Condition &amp; exceptions</h4>
+   <div class="bolsec"><h4><span class="step">8</span> Condition &amp; exceptions</h4>
      <div class="f"><label class="fl">Damage / exceptions noted at pickup (shown on delivery acknowledgement)</label><textarea id="b_exceptions" rows="3" placeholder="e.g. scratch on dresser top, dent on washer door">${esc(s.exceptions)}</textarea></div></div>
 
-   <div class="bolsec"><h4><span class="step">10</span> Finish</h4>
+   <div class="bolsec"><h4><span class="step">9</span> Finish</h4>
      <p class="muted" id="sigCount2" style="margin:0 0 10px"></p>
      <div class="btnrow"><button onclick="generateBOL('${job.id}')">✅ Generate signed Bill of Lading</button><button class="ghost" onclick="openFmJob('${job.id}')">Cancel</button></div>
      <p class="muted" style="margin-top:8px">All section signatures, timestamps, device &amp; (if allowed) location are captured for the audit trail. Delivery acknowledgements are signed at delivery.</p></div>`;
@@ -1014,10 +1014,13 @@ const SIGPTS=[
  {key:'ldf',label:'Long Distance Form (LDF-08)',who:['cust']},
  {key:'pms',label:'Packing & materials / bulky (PMS-19)',who:['cust','carrier']}];
 function sigLabel(pt){if(pt.key==='valuation'){const v=(document.querySelector('input[name=b_val]:checked')||{}).value;return 'Valuation election — '+(v==='full'?'Option 1, Full Value':'Option 2, 60¢/lb waiver');}return pt.label;}
+const WAIVER_TEXT='I AGREE to WAIVE Full (Replacement) Value Protection and release my shipment at 60 CENTS PER POUND PER ARTICLE. If an item is lost or damaged, compensation is 60¢ × its weight in pounds (a 10 lb item = $6.00 maximum) — NOT its actual value. I have initialed this election and received the "Your Rights and Responsibilities When You Move" booklet.';
+const FULL_TEXT='I have selected Option 1 — Full (Replacement) Value Protection — and received the "Your Rights and Responsibilities When You Move" booklet.';
+function sigText(key){if(key==='valuation'){const v=(document.querySelector('input[name=b_val]:checked')||{}).value;return v==='full'?FULL_TEXT:WAIVER_TEXT;}return SIG_TEXT[key]||'';}
 function sigBlockInner(key){const pt=SIGPTS.find(p=>p.key===key);if(!pt)return '';const st=window._sigState=window._sigState||{ack:{}};const a=st.ack[key]||{};
   const slots=pt.who.map(w=>{const sg=a[w];const who=w==='cust'?'Customer':'Foreman';
     return `<div class="sigslot ${sg?'on':''}"><span class="who">${who}</span>${sg?`<img src="${sg.img}"><span class="ts">${(sg.ts.split(',')[1]||'').trim()}</span><button class="sigbtn ghost" onclick="clearSig('${key}','${w}')">↺</button>`:`<button class="sigbtn" onclick="applySig('${key}','${w}')">✍️ Sign</button>`}</div>`;}).join('');
-  return `<div class="sct">✍️ ${esc(sigLabel(pt))}</div><div class="sigack">${esc(SIG_TEXT[key]||'')}</div><div class="sigslots">${slots}</div>`;}
+  return `<div class="sct">✍️ ${esc(sigLabel(pt))}</div><div class="sigack">${esc(sigText(key))}</div><div class="sigslots">${slots}</div>`;}
 function refreshSig(key){const el=document.getElementById('sig_'+key);if(el)el.innerHTML=sigBlockInner(key);updateSigCount();}
 function fillSigBlocks(){SIGPTS.forEach(pt=>refreshSig(pt.key));}
 function applySig(key,who){const d=who==='cust'?padData('b_custSig'):padData('b_foreSig');if(!d){alert('Capture the '+(who==='cust'?'customer':'foreman')+' signature in Signature setup at the top first.');return;}const st=window._sigState=window._sigState||{ack:{}};st.ack[key]=st.ack[key]||{};st.ack[key][who]={img:d,ts:now()};refreshSig(key);}
@@ -1172,7 +1175,8 @@ function openBOLDoc(id){renderBOLDoc(id);}
 function bolMoney(x){return money(num(x)||0);}
 function sigLabelDoc(b,key){if(key==='valuation')return 'Valuation election — '+(b.valuation==='full'?'Option 1, Full Value':'Option 2, 60¢/lb waiver');const pt=SIGPTS.find(p=>p.key===key);return pt?pt.label:key;}
 function docSig(b,key){const pt=SIGPTS.find(p=>p.key===key);if(!pt)return '';const a=(b.sigs||{})[key]||{};
-  return `<div class="docack"><div class="dackt"><b>${esc(sigLabelDoc(b,key))}.</b> ${esc(SIG_TEXT[key]||'')}</div><div class="docsigs">${pt.who.map(w=>{const sg=a[w];const who=w==='cust'?("Customer's signature &amp; date"+(b.custPrinted?' — printed name: '+esc(b.custPrinted):'')):"Carrier / foreman signature &amp; date";return `<div class="docsig">${sg?`<img src="${sg.img}">`:'<div style="height:44px"></div>'}<div class="docsigln">${who}${sg?' · '+esc(sg.ts):''}</div></div>`;}).join('')}</div></div>`;}
+  const dtxt=(key==='valuation')?(b.valuation==='full'?FULL_TEXT:WAIVER_TEXT):(SIG_TEXT[key]||'');
+  return `<div class="docack"><div class="dackt"><b>${esc(sigLabelDoc(b,key))}.</b> ${esc(dtxt)}</div><div class="docsigs">${pt.who.map(w=>{const sg=a[w];const who=w==='cust'?("Customer's signature &amp; date"+(b.custPrinted?' — printed name: '+esc(b.custPrinted):'')):"Carrier / foreman signature &amp; date";return `<div class="docsig">${sg?`<img src="${sg.img}">`:'<div style="height:44px"></div>'}<div class="docsigln">${who}${sg?' · '+esc(sg.ts):''}</div></div>`;}).join('')}</div></div>`;}
 function renderBOLDoc(id){const j=getJob(id);if(!j||!j.bol){goForeman();return;}const e=j.est||{},b=j.bol;
   const back=getFm()?`openFmJob('${id}')`:`openJob('${id}')`;
   const acc=[['Stairs',b.locStairs,b.chStairs],['Elevator',b.locElevator,b.chElevator],['Long carry',b.locLongCarry,b.chLongCarry],['Shuttle',b.locShuttle,b.chShuttle],['Storage in transit',b.locSIT,b.chSIT],['Storage handling',b.locStgHandling,b.chStgHandling],['Extra labor',b.locExtraLabor,b.chExtraLabor],['Extra stop',b.locExtraStop,b.chExtraStop],['Waiting / overnight',b.locWaiting,b.chWaiting]];
