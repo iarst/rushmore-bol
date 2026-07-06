@@ -265,18 +265,20 @@ function goForeman(){if(location.hash==='#foreman')router();else location.hash='
 /* ===== OFFICE ===== */
 function render(v){const a=$('#app');if(v==='dashboard')return a.innerHTML=vDashboard();if(v==='intake')return a.innerHTML=vIntake();if(v==='job')return a.innerHTML=vJob();}
 function newJob(){cur={id:'tmp'+Date.now(),est:null,foreman:null,eta:null,status:'New',created:now()};if(location.hash)location.hash='';render('intake');}
+function cfLine(j){const v=j.est&&j.est.volume;return v?` · <span style="font-weight:600;color:var(--muted)">${esc(v)} cf</span>`:'';}
+function szOf(a){const m=(a||'').match(/,\s*([A-Z]{2})\s+(\d{5})/);return m?m[1]+' '+m[2]:((a||'').split(',')[1]||'').trim();}
 function officeRow(j){return `<div class="jobrow" onclick="openJob('${j.id}')">
-    <div class="agtime"${j.eta?'':' style="color:#9A6A00"'}>${j.eta?esc(j.eta.window):'needs ETA'}${szLine(j)}</div>
-    <div style="flex:1"><div class="id">${j.id} · ${esc(j.est?.customer)||'—'}</div>
-      <div class="meta">${esc((j.est?.oAddr||'').split(',')[1]||'')} → ${esc((j.est?.dAddr||'').split(',')[1]||'')} ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} ${j.foreman?'· '+esc(j.foreman.name):''}${j.bol&&j.bol.signed?' · <b style="color:#1D9E75">BOL ✓</b>':''}</div></div>
+    <div class="agtime"${j.eta?'':' style="color:#9A6A00"'}>${j.eta?esc(j.eta.window):'needs ETA'}</div>
+    <div style="flex:1"><div class="id">${j.id} · ${esc(j.est?.customer)||'—'}${cfLine(j)}</div>
+      <div class="meta">${esc(szOf(j.est?.oAddr))} → ${esc(szOf(j.est?.dAddr))} ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} ${j.foreman?'· '+esc(j.foreman.name):''}${j.bol&&j.bol.signed?' · <b style="color:#1D9E75">BOL ✓</b>':''}</div></div>
     <div class="right">${statusPill(j.status)}</div></div>`;}
 function shortPick(j){const k=firstPickupKey(j);if(k==='9999-99-99')return 'no date';const p=k.split('-');return (+p[1])+'/'+(+p[2]);}
 function origSZ(j){const m=(j.est&&j.est.oAddr||'').match(/,\s*([A-Z]{2})\s+(\d{5})/);return m?m[1]+' '+m[2]:'';}
 function szLine(j){const s=origSZ(j);return s?`<div style="font-weight:700;color:var(--muted);font-size:11.5px;margin-top:3px">📍 ${esc(s)}</div>`:'';}
 function newRow(j){return `<div class="jobrow newrow" onclick="openJob('${j.id}')">
-    <div class="agtime" style="color:#9A6A00;min-width:96px">📅 ${shortPick(j)}${szLine(j)}</div>
-    <div style="flex:1"><div class="id">${j.id} · ${esc(j.est?.customer)||'—'}</div>
-      <div class="meta">${esc((j.est?.oAddr||'').split(',')[1]||j.est?.oAddr||'')} → ${esc((j.est?.dAddr||'').split(',')[1]||j.est?.dAddr||'')}${j.est?.miles?' · '+esc(j.est.miles)+' mi':''}${j.source==='inbox'?' · <span style="color:#1D9E75">📥 estimates@</span>':j.source==='upload'?' · <span style="color:#0058B0">📄 uploaded</span>':''}</div></div>
+    <div class="agtime" style="color:#9A6A00;min-width:96px">📅 ${shortPick(j)}</div>
+    <div style="flex:1"><div class="id">${j.id} · ${esc(j.est?.customer)||'—'}${cfLine(j)}</div>
+      <div class="meta">${esc(szOf(j.est?.oAddr)||j.est?.oAddr||'')} → ${esc(szOf(j.est?.dAddr)||j.est?.dAddr||'')}${j.est?.miles?' · '+esc(j.est.miles)+' mi':''}${j.source==='inbox'?' · <span style="color:#1D9E75">📥 estimates@</span>':j.source==='upload'?' · <span style="color:#0058B0">📄 uploaded</span>':''}</div></div>
     <div class="right"><span class="pill p-new">NEW</span></div></div>`;}
 function vDashboard(){
   const all=store.get().slice().sort((a,b)=>{const ka=firstPickupKey(a),kb=firstPickupKey(b);return ka!==kb?(ka<kb?-1:1):(fmWinOrder(a.eta&&a.eta.window)-fmWinOrder(b.eta&&b.eta.window));});
