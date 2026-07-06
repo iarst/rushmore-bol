@@ -788,6 +788,10 @@ function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);cons
   const _pgsA=+e.pgsAmt||0;             // PGS delivery (its own line)
   const _exped=+e.expeditedAmt||0;
   const _binding=+e.bindingAmt||0;
+  // one-day pickup + any other fee rows the parser caught generically — each its own line
+  const _cc=[];
+  if(+e.oneDayAmt)_cc.push({label:'One-day pickup',amt:(+e.oneDayAmt).toFixed(2)});
+  (e.extras||[]).forEach(x=>{if(+x.amount)_cc.push({label:x.label,amt:(+x.amount).toFixed(2)});});
   const _disc=+e.discount||0;
   const _net=(e.total!=null?+e.total:0);
   const _gross=+( _net+_disc ).toFixed(2);
@@ -811,7 +815,7 @@ function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);cons
     dedicatedTruck:'',expeditedDate:'',stairsFlights:'',extraLaborHrs:'',
     fullPackChoice:(_packA>0?'Yes':(e.fullPack?'Yes':'No')),packCf:(_vol||''),packRateCf:_packRate.toFixed(2),packMaterials:[],materialsNote:'',packTotal:'',
     storageChoice:'No',storageStart:'',storageEnd:'',ttAccessChoice:'Tractor-trailer access available',dwellingO:e.oType||'Private Home',dwellingD:e.dType||'Private Home',walkupFlights:'',accessDenied:false,accessExplain:'',
-    exceptions:'',customCharges:[],consent:false,custSig:'',foreSig:'',custPrinted:'',custInit:''},b);}
+    exceptions:'',customCharges:_cc,consent:false,custSig:'',foreSig:'',custPrinted:'',custInit:''},b);}
 function openBOL(id){renderBOL(id);}
 function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e=job.est||{};const p=payments(e);const s=_bolSeed=bolSeed(job);
   try{if(navigator.geolocation)navigator.geolocation.getCurrentPosition(g=>{window._geo={lat:+g.coords.latitude.toFixed(5),lng:+g.coords.longitude.toFixed(5),at:now()};},()=>{},{timeout:6000});}catch(_){}
@@ -1153,8 +1157,8 @@ function backendPayload(job){const e=job.est||{},b=job.bol||{};const oc=parseCSZ
     chShuttle:b.chShuttle,locShuttle:b.locShuttle,chSIT:b.chSIT,locSIT:b.locSIT,chStgHandling:b.chStgHandling,locStgHandling:b.locStgHandling,
     chExtraLabor:b.chExtraLabor,locExtraLabor:b.locExtraLabor,chExtraStop:b.chExtraStop,locExtraStop:b.locExtraStop,chWaiting:b.chWaiting,locWaiting:b.locWaiting,
     chRedelivery:b.chRedelivery,chAccTotal:chAccTotal?chAccTotal.toFixed(2):'',
-    chOther:(num(b.chOther)||0)?(num(b.chOther)||0).toFixed(2):'',
-    chOtherDesc:(b.chOtherDesc||'').replace(/\s*\$[\d,]+\.?\d*/g,'').slice(0,60),
+    chOther:(function(){const cc=(b.customCharges||[]).reduce((t,c)=>t+(num(c.amt)||0),0);const o=(num(b.chOther)||0)+cc;return o?o.toFixed(2):'';})(),
+    chOtherDesc:(function(){const parts=[(b.chOtherDesc||'').replace(/\s*\$[\d,]+\.?\d*/g,'').trim()].concat((b.customCharges||[]).map(c=>(c.label||'').trim())).filter(Boolean);return parts.join(' + ').slice(0,60);})(),
     chTotal:b.chTotal,payDiscount:b.payDiscount,payDeposit:b.payDeposit,payOrigin:b.payOrigin,payBalanceDest:b.payBalanceDest,payPriceAdj:b.payPriceAdj,payDestination:b.payDestination,payBalance30:b.payBalance30,
     dedicatedTruck:b.dedicatedTruck,expeditedDate:b.expeditedDate,fullPack:b.fullPack,materialsNote:b.materialsNote,storageStart:b.storageStart,storageEnd:b.storageEnd,walkupFlights:b.walkupFlights,dwellingD:b.dwellingD,
     ttAccess:b.ttAccess,storage:b.storage,dwellingO:b.dwellingO,volume:e.volume,rate:e.rate,packTotal:b.packTotal,
