@@ -590,11 +590,20 @@ function estimateHTML(e){
 }
 function renderFmJob(id,fromLink){
   const job=getJob(id);if(!job){renderFmDashboard();return;}const e=job.est,done=job.eta;
+  const etaForm=`<div class="grid"><div class="f"><label class="fl">Pickup date <span class="req">*</span></label><input type="date" id="etaDate" value="${done?job.eta.date:''}"></div>
+      <div class="f"><label class="fl">3-hour arrival window <span class="req">*</span></label><select id="etaWin">
+        <option value="">Select a window…</option><option>8:00 – 11:00 AM</option><option>11:00 AM – 2:00 PM</option><option>2:00 – 5:00 PM</option><option>5:00 – 8:00 PM</option></select></div></div>
+    <div class="f" style="margin-top:4px"><label class="fl">Note (optional)</label><input id="etaNote" value="${done&&job.eta.note?esc(job.eta.note):''}" placeholder="e.g. crew of 3, bring dollies for appliances"></div>
+    <div class="btnrow"><button onclick="submitETA('${job.id}')" style="font-size:15px;padding:12px 22px">${done?'Update window':'✅ Confirm pickup window'}</button></div>`;
   $('#app').innerHTML=`<div class="modebar">FOREMAN PORTAL</div>
+   ${done?'':`<div class="card" style="border:2px solid #E6B400;background:#FFFBEB;box-shadow:0 8px 28px rgba(230,180,0,.18)">
+     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="pill p-new">STEP 1 · REQUIRED</span><h2 style="margin:0">⏰ Confirm your pickup window</h2></div>
+     <p class="sub" style="margin:8px 0 14px">The office and <b>${esc(e.customer)}</b> are waiting on your ETA for <b>Job ${job.id}</b> — requested dates <b>${esc(e.pickup||'—')}</b>. Everything else unlocks after this.</p>
+     ${etaForm}</div>`}
    <div class="card fmwrap"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="pill p-info">FOREMAN</span><h2 style="margin:0">Pickup — Job ${job.id}</h2>
      <button class="ghost sm right" onclick="openJobSheet('${job.id}','foreman')">📄 Job sheet</button><button class="ghost sm" onclick="goForeman()">My jobs</button></div>
     ${done?`<div class="banner ok" style="margin-top:12px">✓ Pickup window confirmed: <span class="eta">${esc(job.eta.whenLabel)}</span>${job.eta.note?' — '+esc(job.eta.note):''}<small>confirmed ${job.eta.submittedAt}</small></div>`:''}
-    ${job.bol&&job.bol.signed?`<div class="banner ok" style="margin-top:12px">✅ Bill of Lading signed by ${esc(e.customer)} &amp; ${esc((job.crew&&job.crew.name)||(job.foreman&&job.foreman.name)||'crew')}<small>${job.bol.signedAt} · <a href="javascript:void(0)" onclick="generateOfficialBOL('${job.id}')"><b>📄 official BOL (PDF)</b></a> · <a href="javascript:void(0)" onclick="openBOLDoc('${job.id}')">summary</a> · <a href="javascript:void(0)" onclick="openBOL('${job.id}')">edit</a></small></div>${reviewBanner(job.bol)}${(job.bol.review||{}).state==='rejected'?`<div class="btnrow" style="margin-top:8px"><button onclick="openBOL('${job.id}')">✏️ Fix &amp; resubmit the BOL →</button></div>`:''}`:`<div class="banner info" style="margin-top:12px">📝 On site? <a href="javascript:void(0)" onclick="openBOL('${job.id}')"><b>Fill &amp; sign the Bill of Lading →</b></a></div>`}
+    ${job.bol&&job.bol.signed?`<div class="banner ok" style="margin-top:12px">✅ Bill of Lading signed by ${esc(e.customer)} &amp; ${esc((job.crew&&job.crew.name)||(job.foreman&&job.foreman.name)||'crew')}<small>${job.bol.signedAt} · <a href="javascript:void(0)" onclick="generateOfficialBOL('${job.id}')"><b>📄 official BOL (PDF)</b></a> · <a href="javascript:void(0)" onclick="openBOLDoc('${job.id}')">summary</a> · <a href="javascript:void(0)" onclick="openBOL('${job.id}')">edit</a></small></div>${reviewBanner(job.bol)}${(job.bol.review||{}).state==='rejected'?`<div class="btnrow" style="margin-top:8px"><button onclick="openBOL('${job.id}')">✏️ Fix &amp; resubmit the BOL →</button></div>`:''}`:(done?`<div class="banner info" style="margin-top:12px">📝 On site? <a href="javascript:void(0)" onclick="openBOL('${job.id}')"><b>Fill &amp; sign the Bill of Lading →</b></a></div>`:`<div class="banner" style="margin-top:12px;background:#FFFBEB;border:1px solid #EFD574;color:#8A6D00">🔒 The Bill of Lading unlocks after you confirm your pickup window above.</div>`)}
     <p class="sub" style="margin-top:6px">Assigned to ${esc(job.foreman?job.foreman.name:'you')}. Review the job &amp; inventory${done?'.':', then confirm your 3-hour pickup window.'}</p>
     <div class="volbar"><div class="vb"><span class="n">${e.volume} cf</span><span class="l">Volume</span></div>
       <div class="vb"><span class="n">${e.inv?e.inv.totalPieces:'—'}</span><span class="l">Pieces</span></div>
@@ -613,14 +622,9 @@ function renderFmJob(id,fromLink){
    <div class="card"><h3 class="sg">🧾 Job estimate ${e.estimateDate?`<span class="muted" style="font-weight:600">· ${esc(e.estimateDate)}</span>`:''}</h3>
      ${estimateHTML(e)}
      <div class="btnrow"><button class="ghost sm" onclick="window.open('${BACKEND}/estimates/uploads/${esc(job.id)}/pdf','_blank')">📄 View the original estimate (PDF)</button></div></div>
-   <div class="card">
-    ${done?`<h3 class="sg">Change pickup window</h3><p class="muted" style="margin:-4px 0 10px">Currently confirmed: ${esc(job.eta.whenLabel)}.</p>`:`<h3 class="sg">Confirm your pickup window</h3>`}
-    <div class="grid"><div class="f"><label class="fl">Pickup date</label><input type="date" id="etaDate" value="${done?job.eta.date:''}"></div>
-      <div class="f"><label class="fl">3-hour arrival window</label><select id="etaWin">
-        <option value="">Select a window…</option><option>8:00 – 11:00 AM</option><option>11:00 AM – 2:00 PM</option><option>2:00 – 5:00 PM</option><option>5:00 – 8:00 PM</option></select></div></div>
-    <div class="f" style="margin-top:4px"><label class="fl">Note (optional)</label><input id="etaNote" value="${done&&job.eta.note?esc(job.eta.note):''}" placeholder="e.g. crew of 3, bring dollies for appliances"></div>
-    <div class="btnrow"><button onclick="submitETA('${job.id}')">${done?'Update window':'Confirm pickup window →'}</button></div>
-    <p class="muted" style="margin-top:10px">Prototype: saved on this device — shows on your dashboard and the office board here. Real cross-device sync needs the backend.</p></div>`;
+   ${done?`<div class="card">
+    <h3 class="sg">Change pickup window</h3><p class="muted" style="margin:-4px 0 10px">Currently confirmed: ${esc(job.eta.whenLabel)}.</p>
+    ${etaForm}</div>`:''}`;
   if(done&&$('#etaWin'))$('#etaWin').value=job.eta.window;
 }
 function submitETA(id){const dt=$('#etaDate').value,win=$('#etaWin').value;
