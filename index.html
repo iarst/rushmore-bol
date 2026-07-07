@@ -389,7 +389,28 @@ function goOffice(){if(location.hash)location.hash='';else router();}
 function goForeman(){if(location.hash==='#foreman')router();else location.hash='#foreman';}
 
 /* ===== OFFICE ===== */
-function render(v){const a=$('#app');if(v==='dashboard')return a.innerHTML=vDashboard();if(v==='intake'){a.innerHTML=vIntake();setTimeout(loadUploads,0);return;}if(v==='job')return a.innerHTML=vJob();}
+function render(v){const a=$('#app');if(v==='dashboard')return a.innerHTML=vDashboard();if(v==='intake'){a.innerHTML=vIntake();setTimeout(loadUploads,0);return;}if(v==='inbox')return a.innerHTML=vInbox();if(v==='job')return a.innerHTML=vJob();}
+function vInbox(){
+  const all=store.get();
+  const st=j=>((j.bol||{}).review||{}).state||'pending';
+  const signed=all.filter(j=>j.bol&&j.bol.signed);
+  const pend=signed.filter(j=>st(j)==='pending'),rej=signed.filter(j=>st(j)==='rejected'),done=signed.filter(j=>st(j)==='approved');
+  const row=(j,kind)=>{const b=j.bol;return `<div class="jobrow" style="cursor:default">
+    <div style="flex:1"><div class="id">${j.id} · ${esc(j.est?.customer||'—')} ${kind==='done'?'<span class="pill p-ok">completed ✓</span>':kind==='rej'?'<span class="pill" style="background:var(--badbg);color:var(--bad)">sent back</span>':'<span class="pill p-warn">awaiting check</span>'}</div>
+      <div class="meta">signed ${esc(b.signedAt||'')} · ${esc(b.custPrinted||'?')} + ${esc((j.crew&&j.crew.name)||(j.foreman&&j.foreman.name)||'crew')} · total ${bolMoney(b.chTotal)}${kind==='rej'&&b.review&&b.review.note?' · <b style="color:var(--bad)">“'+esc(b.review.note)+'”</b>':''}${kind==='done'?' · verified '+esc((b.review&&b.review.at)||''):''}</div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="sm ghost" onclick="cur=getJob('${j.id}');renderBOLDoc('${j.id}')">📄 e-BOL</button>
+      <button class="sm ghost" onclick="renderAuditLog('${j.id}')">🧾 Log</button>
+      <button class="sm ghost" onclick="openJob('${j.id}')">Job</button>
+      ${kind!=='done'?`<button class="sm" style="background:var(--ok)" onclick="approveBOL('${j.id}','inbox')">✅ Verify &amp; complete</button><button class="sm ghost" style="color:var(--bad)" onclick="rejectBOL('${j.id}','inbox')">↩ Send back</button>`:''}
+    </div></div>`;};
+  return `<div class="modebar">OFFICE · BOL VERIFICATION INBOX</div>
+   <div class="card"><h2>📥 BOL verification inbox</h2><p class="sub">Every signed Bill of Lading lands here first. Verify it against the estimate, then <b>✅ Verify &amp; complete</b> — only after your check-mark is the BOL labeled <b>completed</b> for everyone, the packet stored, and the customer emailed a copy.</p>
+   <div class="btnrow" style="margin:0 0 12px"><button class="ghost sm" onclick="goOffice()">← Board</button><button class="ghost sm" onclick="syncBoard().then(()=>render('inbox'))">🔄 Refresh</button></div>
+   ${pend.length?'<div class="sr-h" style="padding-left:0">⏳ Awaiting verification ('+pend.length+')</div><div class="joblist">'+pend.map(j=>row(j,'pend')).join('')+'</div>':'<div class="empty">Nothing waiting — every signed BOL is verified ✓</div>'}
+   ${rej.length?'<div class="sr-h" style="padding-left:0;margin-top:16px">↩ Sent back — waiting on the crew ('+rej.length+')</div><div class="joblist">'+rej.map(j=>row(j,'rej')).join('')+'</div>':''}
+   ${done.length?'<div class="sr-h" style="padding-left:0;margin-top:16px">✅ Completed ('+done.length+')</div><div class="joblist">'+done.map(j=>row(j,'done')).join('')+'</div>':''}</div>`;
+}
 function newJob(){cur={id:'tmp'+Date.now(),est:null,foreman:null,eta:null,status:'New',created:now()};if(location.hash)location.hash='';render('intake');}
 function cfLine(j){const v=j.est&&j.est.volume;return v?` · <span style="font-weight:600;color:var(--muted)">${esc(v)} cf</span>`:'';}
 function szOf(a){const m=(a||'').match(/,\s*([A-Z]{2})\s+(\d{5})/);return m?m[1]+' '+m[2]:((a||'').split(',')[1]||'').trim();}
@@ -419,6 +440,7 @@ function vDashboard(){
   return `<div class="modebar">OFFICE · DISPATCH BOARD</div>
     <div class="card"><h2>Dispatch board</h2><p class="sub">Estimate in → assign a foreman → he confirms a 3-hour pickup window.</p>
     <div class="btnrow" style="margin:0 0 14px"><button onclick="newJob()">📄 Jobs — estimates &amp; BOLs</button>
+    ${c.Review?`<button style="background:#E6B400;color:#2A2200" onclick="render('inbox')">📥 BOL inbox · ${c.Review} to verify</button>`:`<button class="ghost" onclick="render('inbox')">📥 BOL inbox</button>`}
     <button class="ghost" onclick="checkInbox(this)">🔄 Refresh</button>
     <span class="right" style="align-self:center"><span class="pill p-grey">${c.New||0} new</span> <span class="pill p-info">${c.Assigned||0} assigned</span> <span class="pill p-ok">${c.Scheduled||0} scheduled</span>${c.Review?` <span class="pill p-warn">${c.Review} to review</span>`:''}</span></div>
     <div class="joblist">${rows}</div></div>
@@ -579,7 +601,7 @@ function vJob(){
     <h3 class="sg" style="margin-top:16px">📦 Inventory ${e.inv?`<span class="muted" style="font-weight:600">· ${e.inv.totalPieces} pieces</span>`:''}</h3>
     ${inventoryHTML(e.inv)}</div>${reviewBlock}${cardBlock}${assignBlock}`;
 }
-async function approveBOL(id){const job=getJob(id);if(!job||!job.bol){alert('No signed BOL yet.');return;}
+async function approveBOL(id,from){const job=getJob(id);if(!job||!job.bol){alert('No signed BOL yet.');return;}
   const to=(job.est&&job.est.email)||'';
   if(!confirm('Approve this Bill of Lading?\n\n• The official packet is generated and stored\n• A copy is emailed to '+(to||'the customer (no email on file — will only be stored)')))return;
   const pl=backendPayload(job);if(to)pl.emailTo=to;
@@ -588,13 +610,13 @@ async function approveBOL(id){const job=getJob(id);if(!job||!job.bol){alert('No 
     if(!r.ok)throw new Error('server '+r.status);
     job.bol.review={state:'approved',at:now()};job.status='Done';
     logEvent(job,'BOL approved by office','packet generated & stored'+(to?' · customer copy emailed to '+to:''));
-    saveJob(job);cur=getJob(id);render('job');
+    saveJob(job);if(from==='inbox'){render('inbox');}else{cur=getJob(id);render('job');}
   }catch(e){alert('Could not generate the packet ('+e.message+') — the backend may be waking up. Try again in ~40s.');}}
-function rejectBOL(id){const job=getJob(id);if(!job||!job.bol)return;
+function rejectBOL(id,from){const job=getJob(id);if(!job||!job.bol)return;
   const note=prompt('What must be fixed? (the crew sees this note on the job)');if(note==null)return;
   job.bol.review={state:'rejected',note:note.trim(),at:now()};job.status='Review';
   logEvent(job,'BOL sent back by office',note.trim());
-  saveJob(job);cur=getJob(id);render('job');}
+  saveJob(job);if(from==='inbox'){render('inbox');}else{cur=getJob(id);render('job');}}
 function assignForeman(){const fm=foremenStore.get();const i=+$('#fmSel').value;cur.foreman=fm[i];cur.assignedAt=now();cur.status='Assigned';saveJob(cur);render('job');}
 function addForeman(){const n=$('#nfn').value.trim(),em=$('#nfe').value.trim();if(!n){alert('Enter a name.');return;}const fm=foremenStore.get();fm.push({name:n,email:em});foremenStore.set(fm);render('job');}
 function copyLink(){const t=CURLINK||foremanLink(cur);(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{const b=event.target;b.textContent='✓ Copied';setTimeout(()=>b.textContent='📋 Copy link',1500);}).catch(()=>prompt('Copy this link:',t));}
@@ -614,7 +636,7 @@ function fmDateLabel(d){try{return new Date(d+'T00:00').toLocaleDateString([],{w
 function fmRow(j){return `<div class="jobrow" onclick="openFmJob('${j.id}')">
     <div class="agtime"${j.eta?'':' style="color:#9A6A00"'}>${j.eta?esc(j.eta.window):'needs ETA'}${szLine(j)}</div>
     <div style="flex:1"><div class="id">${j.id} · ${esc(j.est?.customer)}</div>
-      <div class="meta">${j.est?.volume||'?'} cf ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} · ${esc((j.est?.oAddr||'').split(',')[0])}${j.bol&&j.bol.signed?' · <b style="color:#1D9E75">BOL ✓</b>':''}</div></div>
+      <div class="meta">${j.est?.volume||'?'} cf ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} · ${esc((j.est?.oAddr||'').split(',')[0])}${j.bol&&j.bol.signed?((j.bol.review||{}).state==='approved'?' · <b style="color:#1D9E75">BOL completed ✓</b>':(j.bol.review||{}).state==='rejected'?' · <b style="color:#D70015">⚠ fix BOL</b>':' · <b style="color:#9A6A00">BOL in office review</b>'):''}</div></div>
     <div class="right">${j.eta?'<span class="pill p-ok">scheduled</span>':'<span class="pill p-warn">needs ETA</span>'}</div></div>`;}
 function renderFmDashboard(){const me=fmMe();const mine=store.get().filter(j=>j.foreman&&j.foreman.email===me.email);
   const sched=mine.filter(j=>j.eta&&j.eta.date).sort((a,b)=> a.eta.date===b.eta.date? fmWinOrder(a.eta.window)-fmWinOrder(b.eta.window) : (a.eta.date<b.eta.date?-1:1));
