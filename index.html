@@ -602,9 +602,8 @@ function vJob(){
     ${inventoryHTML(e.inv)}</div>${reviewBlock}${cardBlock}${assignBlock}`;
 }
 async function approveBOL(id,from){const job=getJob(id);if(!job||!job.bol){alert('No signed BOL yet.');return;}
-  const realTo=(job.est&&job.est.email)||'';
-  const to='foreman@example.com'; // BUILD MODE — placeholder for the customer email, nothing goes to real customers
-  if(!confirm('Approve this Bill of Lading?\n\n• The official packet is generated and stored\n• BUILD MODE: the customer copy goes to '+to+(realTo?' (placeholder for '+realTo+')':'')))return;
+  const to=(job.est&&job.est.email)||'';
+  if(!confirm('Approve this Bill of Lading?\n\n• The official packet is generated and stored\n• BUILD MODE: the customer copy goes to the office test inbox — nothing is sent to the real customer'+(to?' ('+to+')':'')))return;
   const pl=backendPayload(job);if(to)pl.emailTo=to;
   try{
     const r=await fetch(BACKEND+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pl)});
