@@ -569,6 +569,25 @@ function renderFmDashboard(){const me=fmMe();const mine=store.get().filter(j=>j.
       <button class="ghost sm right" onclick="fmSignOut()">Sign out</button></div></div>
     <div class="card"><h3 class="sg">Your jobs · by date</h3><div class="joblist">${body}</div></div>`;}
 function openFmJob(id){renderFmJob(id,false);}
+function estimateHTML(e){
+  const rows=[];
+  const add=(l,v)=>{if(v!=null&&v!==''&&+v!==0)rows.push(`<div class="kv"><span class="k">${l}</span><span>${money(+v)}</span></div>`);};
+  add('Transportation ('+(e.volume||'?')+' cf @ $'+(e.rate||'?')+'/cf)',e.basic);
+  add('Fuel surcharge'+(e.fuelPct?' ('+esc(e.fuelPct)+'%)':''),e.fuelAmt);
+  add('Full packing',e.packAmt);
+  add('Bulky articles',e.bulkyAmt);
+  add('Shuttle',e.shuttleAmt);
+  add('PGS delivery',e.pgsAmt);
+  add('Expedited',e.expeditedAmt);
+  add('One-day pickup',e.oneDayAmt);
+  add('Binding estimate fee',e.bindingAmt);
+  add('Convenience fee',e.convenienceAmt);
+  (e.extras||[]).forEach(x=>add(esc(x.label||'Other fee'),x.amount));
+  if(+e.discount)rows.push(`<div class="kv"><span class="k">Discount</span><span style="color:var(--ok);font-weight:700">− ${money(+e.discount)}</span></div>`);
+  rows.push(`<div class="kv" style="border-top:2px solid var(--navy);border-bottom:0"><span class="k" style="color:var(--navy);font-weight:800">TOTAL MOVING ESTIMATE</span><span style="font-weight:800;color:var(--navy)">${money(+e.total||0)}</span></div>`);
+  if(+e.deposit)rows.push(`<div class="kv"><span class="k">Deposit paid at booking</span><span>− ${money(+e.deposit)}</span></div>`);
+  return rows.join('')||'<p class="muted">No parsed charges on this estimate.</p>';
+}
 function renderFmJob(id,fromLink){
   const job=getJob(id);if(!job){renderFmDashboard();return;}const e=job.est,done=job.eta;
   $('#app').innerHTML=`<div class="modebar">FOREMAN PORTAL</div>
@@ -591,8 +610,9 @@ function renderFmJob(id,fromLink){
     <h3 class="sg" style="margin-top:14px">💵 Payment</h3>
     ${paymentRows(e)}
    </div>
-   <div class="card"><h3 class="sg">📦 Inventory — what to expect ${e.inv?`<span class="muted" style="font-weight:600">· ${e.inv.totalPieces} pieces</span>`:''}</h3>
-     ${inventoryHTML(e.inv)}</div>
+   <div class="card"><h3 class="sg">🧾 Job estimate ${e.estimateDate?`<span class="muted" style="font-weight:600">· ${esc(e.estimateDate)}</span>`:''}</h3>
+     ${estimateHTML(e)}
+     <div class="btnrow"><button class="ghost sm" onclick="window.open('${BACKEND}/estimates/uploads/${esc(job.id)}/pdf','_blank')">📄 View the original estimate (PDF)</button></div></div>
    <div class="card">
     ${done?`<h3 class="sg">Change pickup window</h3><p class="muted" style="margin:-4px 0 10px">Currently confirmed: ${esc(job.eta.whenLabel)}.</p>`:`<h3 class="sg">Confirm your pickup window</h3>`}
     <div class="grid"><div class="f"><label class="fl">Pickup date</label><input type="date" id="etaDate" value="${done?job.eta.date:''}"></div>
