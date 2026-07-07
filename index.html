@@ -755,8 +755,7 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      <label class="chk"><input type="checkbox" id="b_consent"> <span>The customer consents to sign this Bill of Lading electronically on this device. <span class="req">*</span></span></label>
      <div class="twocol" style="margin-top:8px">
        <div><div class="padlbl"><b>Customer</b> · ${esc(e.customer)}</div><div class="padwrap"><canvas class="pad" id="b_custSig"></canvas><button class="padclear" type="button" onclick="padClear('b_custSig')">Clear</button></div></div>
-       <div><div class="padlbl"><b>Foreman</b> · ${esc(job.foreman?job.foreman.name:'foreman')}</div><div class="padwrap"><canvas class="pad" id="b_foreSig"></canvas><button class="padclear" type="button" onclick="padClear('b_foreSig')">Clear</button></div></div>
-       <div><div class="padlbl"><b>Customer initials</b> · required for Option 2 — 60¢/lb waiver</div><div class="padwrap"><canvas class="pad padsm" id="b_custInit"></canvas><button class="padclear" type="button" onclick="padClear('b_custInit')">Clear</button></div></div></div></div>
+       <div><div class="padlbl"><b>Foreman</b> · ${esc(job.foreman?job.foreman.name:'foreman')}</div><div class="padwrap"><canvas class="pad" id="b_foreSig"></canvas><button class="padclear" type="button" onclick="padClear('b_foreSig')">Clear</button></div></div></div></div>
 
    <div class="bolsec"><h4><span class="step">1</span> Bill of Lading — identifiers &amp; dates</h4>
      <div class="twocol">
@@ -791,6 +790,9 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      <div class="optrow">
        <label class="opt ${s.valuation==='full'?'sel':''}" onclick="bolSel(this)"><input type="radio" name="b_val" value="full" ${s.valuation==='full'?'checked':''}><div><div class="ot">Option 1 — Full (Replacement) Value Protection</div><div class="od">Most coverage; valuation charge may apply. Customer may declare a higher value below.</div></div></label>
        <label class="opt ${s.valuation==='waiver'?'sel':''}" onclick="bolSel(this)"><input type="radio" name="b_val" value="waiver" ${s.valuation==='waiver'?'checked':''}><div><div class="ot">Option 2 — Waiver, Released Value 60¢ / lb per article</div><div class="od"><b>This is NOT insurance.</b> If an item is lost or damaged, the carrier's maximum liability is <b>60 cents × the item's weight in pounds</b> — a 10 lb item = $6.00 maximum, no matter what it's actually worth. No extra cost. The customer must <b>initial AND sign</b> to agree to this lower protection.</div></div></label></div>
+     <div id="waiverInit" style="display:${s.valuation==='waiver'?'':'none'};margin-top:10px;border:1.5px dashed rgba(154,106,0,.5);background:#FFFBEB;border-radius:12px;padding:11px 14px">
+       <div class="padlbl" style="margin-bottom:4px"><b>Customer initials</b> — Option 2 requires the customer to INITIAL the 60¢/lb waiver election <span class="req">*</span></div>
+       <div class="padwrap"><canvas class="pad padsm" id="b_custInit"></canvas><button class="padclear" type="button" onclick="padClear('b_custInit')">Clear</button></div></div>
      <div class="twocol" style="margin-top:8px">
        <div class="f"><label class="fl">Declared total value (Option 1)</label><input id="b_declaredValue" value="${esc(s.declaredValue)}" placeholder="$"></div>
        <div class="f"><label class="fl">FVP cost estimate (carrier)</label><input id="b_fvpEstimate" value="${esc(s.fvpEstimate)}" placeholder="$"></div></div></div>
@@ -878,7 +880,7 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      <p class="muted" id="sigCount2" style="margin:0 0 10px"></p>
      <div class="btnrow"><button onclick="generateBOL('${job.id}')">✅ Generate signed Bill of Lading</button><button class="ghost" onclick="openFmJob('${job.id}')">Cancel</button></div>
      <p class="muted" style="margin-top:8px">All section signatures, timestamps, device &amp; (if allowed) location are captured for the audit trail. Delivery acknowledgements are signed at delivery.</p></div>`;
-  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');padSetup('b_custInit');window._sigState={ack:{}};fillSigBlocks();((s.customCharges)||[]).forEach(c=>addCustomCharge(c.label,c.amt));recalcTotal();toggleStorage();togglePack();},30);
+  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');toggleWaiverInit();window._sigState={ack:{}};fillSigBlocks();((s.customCharges)||[]).forEach(c=>addCustomCharge(c.label,c.amt));recalcTotal();toggleStorage();togglePack();},30);
   window.scrollTo(0,0);
 }
 function recalcFuel(){const g=id=>{const el=document.getElementById(id);return el?(num(el.value)||0):0;};
@@ -946,7 +948,11 @@ function applySig(key,who){const d=who==='cust'?padData('b_custSig'):padData('b_
 function clearSig(key,who){const st=window._sigState||{ack:{}};if(st.ack[key])delete st.ack[key][who];refreshSig(key);}
 function updateSigCount(){const st=window._sigState||{ack:{}};let need=0,have=0;SIGPTS.forEach(pt=>pt.who.forEach(w=>{need++;if(st.ack[pt.key]&&st.ack[pt.key][w])have++;}));
   const txt=`<b>${have} of ${need}</b> section signatures collected.`+(have<need?'':' ✓ All set.');[document.getElementById('sigCount'),document.getElementById('sigCount2')].forEach(c=>{if(c)c.innerHTML=txt;});}
-function bolSel(el){[...el.parentNode.querySelectorAll('.opt')].forEach(o=>o.classList.remove('sel'));el.classList.add('sel');el.querySelector('input').checked=true;if(document.getElementById('sig_valuation'))refreshSig('valuation');}
+function bolSel(el){[...el.parentNode.querySelectorAll('.opt')].forEach(o=>o.classList.remove('sel'));el.classList.add('sel');el.querySelector('input').checked=true;if(document.getElementById('sig_valuation'))refreshSig('valuation');toggleWaiverInit();}
+function toggleWaiverInit(){const v=(document.querySelector('input[name=b_val]:checked')||{}).value;const d=document.getElementById('waiverInit');if(!d)return;
+  d.style.display=(v==='waiver')?'':'none';
+  const c=document.getElementById('b_custInit');
+  if(v==='waiver'&&c&&!c.dataset.init){padSetup('b_custInit');c.dataset.init='1';}}
 function padSetup(id){const c=document.getElementById(id);if(!c)return;const r=c.getBoundingClientRect();const dpr=window.devicePixelRatio||1;c.width=Math.max(1,r.width*dpr);c.height=Math.max(1,r.height*dpr);const ctx=c.getContext('2d');ctx.scale(dpr,dpr);ctx.lineWidth=2.2;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#1d1d1f';c.dataset.drawn='';let drawing=false,last=null;
   const pos=ev=>{const b=c.getBoundingClientRect();const t=(ev.touches&&ev.touches[0])||ev;return{x:t.clientX-b.left,y:t.clientY-b.top};};
   const down=ev=>{drawing=true;last=pos(ev);ev.preventDefault();};
