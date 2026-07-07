@@ -256,7 +256,7 @@ function router(){
   if(h.indexOf('#j=')===0){const id=h.slice(3);$('#nav').innerHTML=navHTML('foreman');$('#app').innerHTML='<div class="card">Loading job…</div>';fetch(BACKEND+'/job/'+encodeURIComponent(id)).then(r=>{if(!r.ok)throw 0;return r.json();}).then(job=>{job.linkId=id;saveJob(job);if(job.foreman&&job.foreman.email)setFm(job.foreman.email);renderFmJob(job.id,true);}).catch(()=>{$('#app').innerHTML='<div class="card">This link could not be opened — it may have expired. Ask the office to resend.</div>';});return;}
   if(h.indexOf('#fm=')===0){try{const job=dec(h.slice(4));if(!getJob(job.id))saveJob(job);if(job.foreman&&job.foreman.email)setFm(job.foreman.email);$('#nav').innerHTML=navHTML('foreman');renderFmJob(job.id,true);}catch(e){$('#app').innerHTML='<div class="card">Invalid link.</div>';}return;}
   if(h.indexOf('#foreman')===0){$('#nav').innerHTML=navHTML('foreman');renderForemanPortal();return;}
-  $('#nav').innerHTML=navHTML('office')+' <button onclick="newJob()">+ New job</button>';render('dashboard');
+  $('#nav').innerHTML=navHTML('office')+' <button onclick="newJob()">📄 Jobs</button>';render('dashboard');
 }
 window.addEventListener('hashchange',router);
 function goOffice(){if(location.hash)location.hash='';else router();}
@@ -288,11 +288,11 @@ function vDashboard(){
   let cd=null;
   rest.forEach(j=>{const k=firstPickupKey(j);if(k!==cd){cd=k;rows+='<div class="agday">'+(k==='9999-99-99'?'Pickup date TBD':fmDateLabel(k))+'</div>';}rows+=officeRow(j);});
   const jobs=all;
-  if(!jobs.length)rows='<div class="empty">No jobs yet. Click <b>+ New job</b> to bring one in from a broker estimate.</div>';
+  if(!jobs.length)rows='<div class="empty">No jobs yet. Open <b>📄 Jobs</b> to bring one in from a broker estimate.</div>';
   const c={New:0,Assigned:0,Scheduled:0};jobs.forEach(j=>{const st=j.status==='Awaiting pickup'?'Scheduled':j.status;c[st]=(c[st]||0)+1;});
   return `<div class="modebar">OFFICE · DISPATCH BOARD</div>
     <div class="card"><h2>Dispatch board</h2><p class="sub">Estimate in → assign a foreman → he confirms a 3-hour pickup window.</p>
-    <div class="btnrow" style="margin:0 0 14px"><button onclick="newJob()">+ New job from estimate</button>
+    <div class="btnrow" style="margin:0 0 14px"><button onclick="newJob()">📄 Jobs — estimates &amp; BOLs</button>
     <button class="ghost" onclick="checkInbox(this)">🔄 Refresh</button>
     <span class="right" style="align-self:center"><span class="pill p-grey">${c.New||0} new</span> <span class="pill p-info">${c.Assigned||0} assigned</span> <span class="pill p-ok">${c.Scheduled||0} scheduled</span></span></div>
     <div class="joblist">${rows}</div></div>
@@ -317,7 +317,7 @@ async function checkInbox(btn){
 }
 function vIntake(){
   return `<div class="modebar">OFFICE</div><div class="steps"><span class="s on">1. Intake</span><span class="s">2. Assign foreman</span><span class="s">3. Pickup window</span></div>
-    <div class="card"><h2>1 · Estimate intake</h2><p class="sub">Signed broker estimates forwarded to <b>estimates@rushmorevanlines.com</b> are read automatically — including the full itemized inventory, extra services and customer notes — and land on the dispatch board. Use <b>🔄 Refresh</b> on the board to pull them in right away.</p>
+    <div class="card"><h2>Jobs · estimate intake</h2><p class="sub">Signed broker estimates forwarded to <b>estimates@rushmorevanlines.com</b> are read automatically — including the full itemized inventory, extra services and customer notes — and land on the dispatch board. Use <b>🔄 Refresh</b> on the board to pull them in right away.</p>
     <label class="fl">Upload an estimate PDF</label>
     <div id="updrop" class="drop" onclick="document.getElementById('upfile').click()"
       ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="dropEst(event)">
@@ -326,21 +326,32 @@ function vIntake(){
     <div id="upmsg" class="muted" style="margin-top:8px"></div>
     <div class="btnrow"><button class="ghost" onclick="goOffice()">← Back to board</button></div></div>
 
-    <div class="card"><h2>Stored estimates</h2><p class="sub">Every original estimate PDF that entered the system — emailed to <b>estimates@</b> or uploaded here. View the source document, re-parse it onto the board, or delete the stored copy.</p>
+    <div class="card"><h2>Stored estimates &amp; generated BOLs</h2><p class="sub">Every original estimate PDF that entered the system — emailed to <b>estimates@</b> or uploaded here — plus the latest generated Bill of Lading for each job. View, re-parse or delete.</p>
     <div id="upList" class="joblist"><div class="muted">Loading…</div></div></div>`;}
 async function loadUploads(){const box=document.getElementById('upList');if(!box)return;
   try{
-    const r=await fetch(BACKEND+'/estimates/uploads');const d=await r.json();
+    const [ru,rb]=await Promise.all([fetch(BACKEND+'/estimates/uploads'),fetch(BACKEND+'/bols')]);
+    const d=await ru.json(),db=await rb.json().catch(()=>({}));
     if(!d.ok)throw new Error(d.error||'failed');
-    if(!(d.uploads||[]).length){box.innerHTML='<div class="empty">No stored estimate PDFs yet — drop one above, or pull new ones in from estimates@.</div>';return;}
-    box.innerHTML=d.uploads.map(u=>`<div class="jobrow" style="cursor:default">
+    const bols={};((db&&db.bols)||[]).forEach(b=>{bols[b.id]=b;});
+    const ups=d.uploads||[];
+    const bolBtn=id=>bols[id]?`<button class="sm ghost" style="color:#1B6B30" onclick="window.open('${BACKEND}/bols/${esc(id)}/pdf','_blank')">📑 BOL</button>`:'';
+    let rows=ups.map(u=>`<div class="jobrow" style="cursor:default">
       <div style="flex:1"><div class="id">${esc(u.id)} · ${esc(u.customer||'—')}${u.total?` · <span style="font-weight:600;color:var(--muted)">$${esc((+u.total).toLocaleString(undefined,{minimumFractionDigits:2}))}</span>`:''}</div>
-        <div class="meta">${esc(u.filename||'')} · ${Math.max(1,Math.round((u.size||0)/1024))} KB · ${u.source==='inbox'?'<span style="color:#1D9E75">📥 estimates@</span>':'<span style="color:#0058B0">📄 uploaded</span>'} · ${esc((u.uploaded||'').slice(0,10))}</div></div>
+        <div class="meta">${esc(u.filename||'')} · ${Math.max(1,Math.round((u.size||0)/1024))} KB · ${u.source==='inbox'?'<span style="color:#1D9E75">📥 estimates@</span>':'<span style="color:#0058B0">📄 uploaded</span>'} · ${esc((u.uploaded||'').slice(0,10))}${bols[u.id]?' · <b style="color:#1B6B30">BOL ✓</b>':''}</div></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="sm ghost" onclick="window.open('${BACKEND}/estimates/uploads/${esc(u.id)}/pdf','_blank')">👁 View</button>
+        ${bolBtn(u.id)}
         <button class="sm ghost" onclick="reparseUpload('${esc(u.id)}',this)">↻ Re-parse</button>
         <button class="sm ghost" style="color:#D70015" onclick="deleteUpload('${esc(u.id)}',this)">🗑</button></div></div>`).join('');
-  }catch(e){box.innerHTML='<div class="empty">Could not load stored estimates ('+esc(e.message)+') — the backend may be waking up.</div>';}}
+    // generated BOLs whose estimate PDF isn't stored (e.g. older jobs)
+    const seen=new Set(ups.map(u=>String(u.id)));
+    ((db&&db.bols)||[]).filter(b=>!seen.has(String(b.id))).forEach(b=>{rows+=`<div class="jobrow" style="cursor:default">
+      <div style="flex:1"><div class="id">${esc(b.id)} · ${esc(b.customer||'—')}</div>
+        <div class="meta">${esc(b.filename||'')} · ${Math.max(1,Math.round((b.size||0)/1024))} KB · <b style="color:#1B6B30">📑 generated BOL</b> · ${esc((b.uploaded||'').slice(0,10))}</div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${bolBtn(b.id)}</div></div>`;});
+    box.innerHTML=rows||'<div class="empty">Nothing stored yet — drop an estimate above, or pull new ones in from estimates@.</div>';
+  }catch(e){box.innerHTML='<div class="empty">Could not load stored documents ('+esc(e.message)+') — the backend may be waking up.</div>';}}
 async function reparseUpload(id,btn){const o=btn.textContent;btn.textContent='⏳';btn.disabled=true;
   try{
     const r=await fetch(BACKEND+'/estimates/uploads/'+encodeURIComponent(id)+'/reparse',{method:'POST'});
