@@ -235,9 +235,37 @@ function mergeRemote(remote){
 }
 async function syncBoard(){try{const r=await fetch(BACKEND+'/board');const d=await r.json();if(d&&d.ok)mergeRemote(d.jobs);}catch(e){}}
 function getJob(id){return store.get().find(j=>j.id===id);}
-function statusPill(s){if(s==='Awaiting pickup')s='Scheduled';const m={New:'p-grey',Assigned:'p-info',Scheduled:'p-ok'};return '<span class="pill '+(m[s]||'p-grey')+'">'+s+'</span>';}
+function statusPill(s){if(s==='Awaiting pickup')s='Scheduled';const m={New:'p-grey',Assigned:'p-info',Scheduled:'p-ok',Review:'p-warn',Done:'p-ok'};const t=s==='Review'?'NEEDS REVIEW':s;return '<span class="pill '+(m[s]||'p-grey')+'">'+t+'</span>';}
 function foremanLink(j){return location.origin+location.pathname+'#fm='+enc(j);}
 function shortLink(id){return location.origin+location.pathname+'#j='+id;}
+/* ---------- customer card: one live per-job link, forwardable to any crew ---------- */
+function rndTok(n){const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<(n||10);i++)s+=a[Math.floor(Math.random()*a.length)];return s;}
+function cardLink(j){return j&&j.cardToken?location.origin+location.pathname+'#c='+j.cardToken:'';}
+function ensureCardToken(j){if(!j.cardToken){j.cardToken=rndTok(10);saveJob(j);if(cur&&cur.id===j.id)cur.cardToken=j.cardToken;}return j.cardToken;}
+function rotateCard(id){if(!confirm('Rotate the card link?\n\nThe OLD link stops working immediately — anyone holding it loses access. A new link is created.'))return;const j=getJob(id);if(!j)return;j.cardToken=rndTok(10);saveJob(j);if(cur&&cur.id===id)cur.cardToken=j.cardToken;render('job');}
+function copyCard(id){const j=getJob(id);const t=cardLink(j);(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{const b=event.target;const o=b.textContent;b.textContent='✓ Copied';setTimeout(()=>b.textContent=o,1500);}).catch(()=>prompt('Copy this link:',t));}
+function emailCard(id){const j=getJob(id);location.href='mailto:?subject='+encodeURIComponent('Pickup job '+j.id+' — customer card')+'&body='+encodeURIComponent('Open this customer card on site: job details, inventory, and the Bill of Lading to fill & sign.\n\n'+cardLink(j)+'\n\nJob '+j.id+' · '+((j.est&&j.est.customer)||''));}
+function crewMe(){try{return JSON.parse(localStorage.getItem('rvl_crew')||'null');}catch(e){return null;}}
+function renderCardGate(id){
+  const j=getJob(id);if(!j){$('#app').innerHTML='<div class="card">Job not found.</div>';return;}
+  const me=crewMe();
+  if(me&&j.crew&&j.crew.phone===me.phone){renderFmJob(id,true);return;}
+  $('#app').innerHTML=`<div class="modebar">FOREMAN PORTAL</div>
+   <div class="card fmwrap" style="max-width:480px;margin:30px auto"><h2>Job ${esc(j.id)} — who's running this pickup?</h2>
+    <p class="sub">Before the job opens, tell the office who you are. Your name is stamped on this job and its paperwork.</p>
+    <div class="f"><label class="fl">Your full name <span class="req">*</span></label><input id="crewName" autocomplete="name" placeholder="First Last" value="${me?esc(me.name):''}"></div>
+    <div class="f" style="margin-top:10px"><label class="fl">Your phone <span class="req">*</span></label><input id="crewPhone" autocomplete="tel" placeholder="(555) 555-5555" value="${me?esc(me.phone):''}"></div>
+    <div class="btnrow"><button onclick="crewEnter('${esc(j.id)}')">Open the job →</button></div></div>`;
+}
+function crewEnter(id){const n=$('#crewName').value.trim(),p=$('#crewPhone').value.trim();
+  if(!n||!p){alert('Enter your name and phone — the office needs to know who is filling the paperwork.');return;}
+  const j=getJob(id);if(!j)return;
+  j.crew={name:n,phone:p,openedAt:now(),device:(navigator.userAgent||'').slice(0,60)};
+  j.crewLog=(j.crewLog||[]).concat([j.crew]);
+  if(j.status==='New')j.status='Assigned';
+  try{localStorage.setItem('rvl_crew',JSON.stringify({name:n,phone:p}));}catch(e){}
+  saveJob(j);renderFmJob(id,true);
+}
 let CURLINK='';
 function linkSnapshot(j){const s=JSON.parse(JSON.stringify(j));delete s.linkId;return s;}
 async function hydrateForemanLink(j){
@@ -264,6 +292,8 @@ function navHTML(mode){return `<button class="${mode==='office'?'act':''}" oncli
 function router(){
   const h=location.hash||'';
   const mid=$('#hdrMid');if(mid)mid.innerHTML=(h===''?'<span class="hsr"><input id="hdrSearch" placeholder="🔎 Search jobs, estimates, contracts" oninput="hdrSearch()" onfocus="hdrSearch()" autocomplete="off"><div id="searchRes"></div></span>':'');
+  if(h.indexOf('#c=')===0){const tk=h.slice(3);$('#nav').innerHTML=navHTML('foreman');$('#app').innerHTML='<div class="card">Loading job…</div>';
+    fetch(BACKEND+'/card/'+encodeURIComponent(tk)).then(r=>{if(!r.ok)throw 0;return r.json();}).then(d=>{saveJob(d.job);renderCardGate(d.job.id);}).catch(()=>{$('#app').innerHTML='<div class="card">This customer card link is no longer valid — ask the office to send you a fresh one.</div>';});return;}
   if(h.indexOf('#j=')===0){const id=h.slice(3);$('#nav').innerHTML=navHTML('foreman');$('#app').innerHTML='<div class="card">Loading job…</div>';fetch(BACKEND+'/job/'+encodeURIComponent(id)).then(r=>{if(!r.ok)throw 0;return r.json();}).then(job=>{job.linkId=id;saveJob(job);if(job.foreman&&job.foreman.email)setFm(job.foreman.email);renderFmJob(job.id,true);}).catch(()=>{$('#app').innerHTML='<div class="card">This link could not be opened — it may have expired. Ask the office to resend.</div>';});return;}
   if(h.indexOf('#fm=')===0){try{const job=dec(h.slice(4));if(!getJob(job.id))saveJob(job);if(job.foreman&&job.foreman.email)setFm(job.foreman.email);$('#nav').innerHTML=navHTML('foreman');renderFmJob(job.id,true);}catch(e){$('#app').innerHTML='<div class="card">Invalid link.</div>';}return;}
   if(h.indexOf('#foreman')===0){$('#nav').innerHTML=navHTML('foreman');renderForemanPortal();return;}
@@ -311,7 +341,7 @@ function szOf(a){const m=(a||'').match(/,\s*([A-Z]{2})\s+(\d{5})/);return m?m[1]
 function officeRow(j){return `<div class="jobrow" onclick="openJob('${j.id}')">
     <div class="agtime"${j.eta?'':' style="color:#9A6A00"'}>${j.eta?esc(j.eta.window):'needs ETA'}</div>
     <div style="flex:1"><div class="id">${j.id} · ${esc(j.est?.customer)||'—'}${cfLine(j)}</div>
-      <div class="meta">${esc(szOf(j.est?.oAddr))} → ${esc(szOf(j.est?.dAddr))} ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} ${j.foreman?'· '+esc(j.foreman.name):''}${j.bol&&j.bol.signed?' · <b style="color:#1D9E75">BOL ✓</b>':''}</div></div>
+      <div class="meta">${esc(szOf(j.est?.oAddr))} → ${esc(szOf(j.est?.dAddr))} ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} ${j.foreman?'· '+esc(j.foreman.name):(j.crew?'· 👷 '+esc(j.crew.name):'')}${j.bol&&j.bol.signed?((j.bol.review||{}).state==='approved'?' · <b style="color:#1D9E75">BOL ✓</b>':(j.bol.review||{}).state==='rejected'?' · <b style="color:#D70015">BOL sent back</b>':' · <b style="color:#9A6A00">BOL to review</b>'):''}</div></div>
     <div class="right">${statusPill(j.status)}</div></div>`;}
 function shortPick(j){const k=firstPickupKey(j);if(k==='9999-99-99')return 'no date';const p=k.split('-');return (+p[1])+'/'+(+p[2]);}
 function origSZ(j){const m=(j.est&&j.est.oAddr||'').match(/,\s*([A-Z]{2})\s+(\d{5})/);return m?m[1]+' '+m[2]:'';}
@@ -323,19 +353,19 @@ function newRow(j){return `<div class="jobrow newrow" onclick="openJob('${j.id}'
     <div class="right"><span class="pill p-new">NEW</span></div></div>`;}
 function vDashboard(){
   const all=store.get().slice().sort((a,b)=>{const ka=firstPickupKey(a),kb=firstPickupKey(b);return ka!==kb?(ka<kb?-1:1):(fmWinOrder(a.eta&&a.eta.window)-fmWinOrder(b.eta&&b.eta.window));});
-  const fresh=all.filter(j=>!j.foreman), rest=all.filter(j=>j.foreman);
+  const fresh=all.filter(j=>!j.foreman&&!j.crew), rest=all.filter(j=>j.foreman||j.crew);
   let rows='';
   if(fresh.length)rows+='<div class="newsec"><div class="newhd">🆕 New estimates · needs a foreman <span class="cnt">'+fresh.length+'</span></div>'+fresh.map(newRow).join('')+'</div>';
   let cd=null;
   rest.forEach(j=>{const k=firstPickupKey(j);if(k!==cd){cd=k;rows+='<div class="agday">'+(k==='9999-99-99'?'Pickup date TBD':fmDateLabel(k))+'</div>';}rows+=officeRow(j);});
   const jobs=all;
   if(!jobs.length)rows='<div class="empty">No jobs yet. Open <b>📄 Jobs</b> to bring one in from a broker estimate.</div>';
-  const c={New:0,Assigned:0,Scheduled:0};jobs.forEach(j=>{const st=j.status==='Awaiting pickup'?'Scheduled':j.status;c[st]=(c[st]||0)+1;});
+  const c={New:0,Assigned:0,Scheduled:0,Review:0,Done:0};jobs.forEach(j=>{const st=j.status==='Awaiting pickup'?'Scheduled':j.status;c[st]=(c[st]||0)+1;});
   return `<div class="modebar">OFFICE · DISPATCH BOARD</div>
     <div class="card"><h2>Dispatch board</h2><p class="sub">Estimate in → assign a foreman → he confirms a 3-hour pickup window.</p>
     <div class="btnrow" style="margin:0 0 14px"><button onclick="newJob()">📄 Jobs — estimates &amp; BOLs</button>
     <button class="ghost" onclick="checkInbox(this)">🔄 Refresh</button>
-    <span class="right" style="align-self:center"><span class="pill p-grey">${c.New||0} new</span> <span class="pill p-info">${c.Assigned||0} assigned</span> <span class="pill p-ok">${c.Scheduled||0} scheduled</span></span></div>
+    <span class="right" style="align-self:center"><span class="pill p-grey">${c.New||0} new</span> <span class="pill p-info">${c.Assigned||0} assigned</span> <span class="pill p-ok">${c.Scheduled||0} scheduled</span>${c.Review?` <span class="pill p-warn">${c.Review} to review</span>`:''}</span></div>
     <div class="joblist">${rows}</div></div>
     <div class="card"><p class="muted" style="margin:0">Pilot build · Estimates auto-import from <b>estimates@</b>, the dispatch board is saved in a <b>shared database</b> (synced across every device, kept through restarts), and the official BOL is generated on the backend. Access is PIN-gated for now; per-user logins arrive later.</p></div>`;
 }
@@ -440,7 +470,22 @@ async function uploadEst(f){
 }
 function vJob(){
   const j=cur,e=j.est,fm=foremenStore.get();
+  if(!String(j.id).startsWith('tmp'))ensureCardToken(j);
   const opts=fm.map((f,i)=>`<option value="${i}">${esc(f.name)} — ${esc(f.email)}</option>`).join('');
+  const cardBlock=j.cardToken?`<div class="card sub2"><h3 class="sg">📇 Customer card — on-site link</h3>
+    <p class="muted" style="margin:-4px 0 8px">One live link per job. Send it to ANY crew — your own foreman or a partner's — whoever opens it identifies themselves before the paperwork unlocks. Reassignment = forward the same link to someone else.</p>
+    <div class="linkbox">${esc(cardLink(j))}</div>
+    <div class="btnrow"><button class="sm" onclick="copyCard('${j.id}')">📋 Copy card link</button><button class="sm ghost" onclick="emailCard('${j.id}')">✉️ Email</button><button class="sm ghost" onclick="rotateCard('${j.id}')">🔁 Rotate (revoke old)</button></div>
+    ${j.crew?`<div class="banner info" style="margin-top:10px">👷 Card opened by <b>${esc(j.crew.name)}</b> · ${esc(j.crew.phone)}<small>${esc(j.crew.openedAt||'')} · ${esc(j.crew.device||'')}</small></div>`:''}</div>`:'';
+  let reviewBlock='';
+  if(j.bol&&j.bol.signed){const rv=j.bol.review||{state:'pending'};
+    reviewBlock=`<div class="card" style="border:1.5px solid ${rv.state==='approved'?'rgba(36,138,61,.4)':rv.state==='rejected'?'rgba(215,0,21,.35)':'#EFD574'}">
+      <h3 class="sg">🧐 Bill of Lading review ${rv.state==='approved'?'<span class="pill p-ok">approved ✓</span>':rv.state==='rejected'?'<span class="pill" style="background:var(--badbg);color:var(--bad)">sent back</span>':'<span class="pill p-warn">awaiting review</span>'}</h3>
+      <p class="muted" style="margin:-4px 0 10px">Signed ${esc(j.bol.signedAt||'')} · printed name <b>${esc(j.bol.custPrinted||'—')}</b> · crew ${esc((j.crew&&j.crew.name)||(j.foreman&&j.foreman.name)||'—')}.
+        ${rv.state==='rejected'?'<br><b style="color:var(--bad)">Sent back:</b> '+esc(rv.note||''):''}
+        ${rv.state==='approved'?'<br>Approved '+esc(rv.at||'')+' — packet generated, stored &amp; emailed to the customer.':''}</p>
+      <div class="btnrow"><button class="ghost sm" onclick="openBOLDoc('${j.id}')">📄 Review the e-BOL</button><button class="ghost sm" onclick="generateOfficialBOL('${j.id}')">📑 Official PDF</button><button class="ghost sm" onclick="openBOL('${j.id}')">✏️ Office edit</button>
+      ${rv.state!=='approved'?`<button class="sm" style="background:var(--ok)" onclick="approveBOL('${j.id}')">✅ Approve &amp; email customer</button><button class="sm ghost" style="color:var(--bad)" onclick="rejectBOL('${j.id}')">↩ Send back to fix</button>`:''}</div></div>`;}
   let assignBlock;
   if(!j.foreman){
     assignBlock=`<div class="card sub2"><h3 class="sg">Assign a foreman</h3>
@@ -477,8 +522,20 @@ function vJob(){
     <h3 class="sg" style="margin-top:16px">💵 Payment</h3>
     ${paymentRows(e)}
     <h3 class="sg" style="margin-top:16px">📦 Inventory ${e.inv?`<span class="muted" style="font-weight:600">· ${e.inv.totalPieces} pieces</span>`:''}</h3>
-    ${inventoryHTML(e.inv)}</div>${assignBlock}`;
+    ${inventoryHTML(e.inv)}</div>${reviewBlock}${cardBlock}${assignBlock}`;
 }
+async function approveBOL(id){const job=getJob(id);if(!job||!job.bol){alert('No signed BOL yet.');return;}
+  const to=(job.est&&job.est.email)||'';
+  if(!confirm('Approve this Bill of Lading?\n\n• The official packet is generated and stored\n• A copy is emailed to '+(to||'the customer (no email on file — will only be stored)')))return;
+  const pl=backendPayload(job);if(to)pl.emailTo=to;
+  try{
+    const r=await fetch(BACKEND+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pl)});
+    if(!r.ok)throw new Error('server '+r.status);
+    job.bol.review={state:'approved',at:now()};job.status='Done';saveJob(job);cur=getJob(id);render('job');
+  }catch(e){alert('Could not generate the packet ('+e.message+') — the backend may be waking up. Try again in ~40s.');}}
+function rejectBOL(id){const job=getJob(id);if(!job||!job.bol)return;
+  const note=prompt('What must be fixed? (the crew sees this note on the job)');if(note==null)return;
+  job.bol.review={state:'rejected',note:note.trim(),at:now()};job.status='Review';saveJob(job);cur=getJob(id);render('job');}
 function assignForeman(){const fm=foremenStore.get();const i=+$('#fmSel').value;cur.foreman=fm[i];cur.assignedAt=now();cur.status='Assigned';saveJob(cur);render('job');}
 function addForeman(){const n=$('#nfn').value.trim(),em=$('#nfe').value.trim();if(!n){alert('Enter a name.');return;}const fm=foremenStore.get();fm.push({name:n,email:em});foremenStore.set(fm);render('job');}
 function copyLink(){const t=CURLINK||foremanLink(cur);(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{const b=event.target;b.textContent='✓ Copied';setTimeout(()=>b.textContent='📋 Copy link',1500);}).catch(()=>prompt('Copy this link:',t));}
@@ -518,7 +575,7 @@ function renderFmJob(id,fromLink){
    <div class="card fmwrap"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="pill p-info">FOREMAN</span><h2 style="margin:0">Pickup — Job ${job.id}</h2>
      <button class="ghost sm right" onclick="openJobSheet('${job.id}','foreman')">📄 Job sheet</button><button class="ghost sm" onclick="goForeman()">My jobs</button></div>
     ${done?`<div class="banner ok" style="margin-top:12px">✓ Pickup window confirmed: <span class="eta">${esc(job.eta.whenLabel)}</span>${job.eta.note?' — '+esc(job.eta.note):''}<small>confirmed ${job.eta.submittedAt}</small></div>`:''}
-    ${job.bol&&job.bol.signed?`<div class="banner ok" style="margin-top:12px">✅ Bill of Lading signed by ${esc(e.customer)} &amp; ${esc(job.foreman?job.foreman.name:'foreman')}<small>${job.bol.signedAt} · <a href="javascript:void(0)" onclick="generateOfficialBOL('${job.id}')"><b>📄 official BOL (PDF)</b></a> · <a href="javascript:void(0)" onclick="openBOLDoc('${job.id}')">summary</a> · <a href="javascript:void(0)" onclick="openBOL('${job.id}')">edit</a></small></div>`:`<div class="banner info" style="margin-top:12px">📝 On site? <a href="javascript:void(0)" onclick="openBOL('${job.id}')"><b>Fill &amp; sign the Bill of Lading →</b></a></div>`}
+    ${job.bol&&job.bol.signed?`<div class="banner ok" style="margin-top:12px">✅ Bill of Lading signed by ${esc(e.customer)} &amp; ${esc((job.crew&&job.crew.name)||(job.foreman&&job.foreman.name)||'crew')}<small>${job.bol.signedAt} · <a href="javascript:void(0)" onclick="generateOfficialBOL('${job.id}')"><b>📄 official BOL (PDF)</b></a> · <a href="javascript:void(0)" onclick="openBOLDoc('${job.id}')">summary</a> · <a href="javascript:void(0)" onclick="openBOL('${job.id}')">edit</a></small></div>${reviewBanner(job.bol)}${(job.bol.review||{}).state==='rejected'?`<div class="btnrow" style="margin-top:8px"><button onclick="openBOL('${job.id}')">✏️ Fix &amp; resubmit the BOL →</button></div>`:''}`:`<div class="banner info" style="margin-top:12px">📝 On site? <a href="javascript:void(0)" onclick="openBOL('${job.id}')"><b>Fill &amp; sign the Bill of Lading →</b></a></div>`}
     <p class="sub" style="margin-top:6px">Assigned to ${esc(job.foreman?job.foreman.name:'you')}. Review the job &amp; inventory${done?'.':', then confirm your 3-hour pickup window.'}</p>
     <div class="volbar"><div class="vb"><span class="n">${e.volume} cf</span><span class="l">Volume</span></div>
       <div class="vb"><span class="n">${e.inv?e.inv.totalPieces:'—'}</span><span class="l">Pieces</span></div>
@@ -929,10 +986,15 @@ function generateBOL(id){const v=s=>{const el=document.getElementById(s);return 
     exceptions:v('b_exceptions'),originAmt:v('b_payOrigin'),
     customCharges:[...document.querySelectorAll('#customCharges .ccrow')].map(r=>({label:r.querySelector('.cclabel').value.trim(),amt:r.querySelector('.ccamt').value.trim()})).filter(c=>num(c.amt)),
     sigs:st.ack,consent:true,custSig:cust,foreSig:fore,custPrinted:printed,custInit:init||'',signed:true,signedAt:now(),device:(navigator.userAgent||'').slice(0,70),geo:window._geo||null});
-  job.bol=bol;saveJob(job);renderBOLDone(id);}
+  job.bol=bol;job.bol.review={state:'pending',submittedAt:now()};job.status='Review';saveJob(job);renderBOLDone(id);}
+function reviewBanner(b){const rv=(b&&b.review)||{};
+  if(rv.state==='approved')return `<div class="banner ok" style="margin-top:12px">✅ Approved by the office<small>${esc(rv.at||'')} · the customer was emailed a copy</small></div>`;
+  if(rv.state==='rejected')return `<div class="banner" style="margin-top:12px;background:var(--badbg);border:1px solid rgba(215,0,21,.25);color:#A50010">↩ The office sent this BOL back to fix:<small style="opacity:1;font-weight:700">“${esc(rv.note||'')}”</small></div>`;
+  return `<div class="banner info" style="margin-top:12px">⏳ Sent to the office for review — once approved, the customer is emailed the signed packet.</div>`;}
 function renderBOLDone(id){const job=getJob(id);const e=job.est||{},b=job.bol||{};const valLbl=b.valuation==='full'?'Option 1 — Full Value Protection':'Option 2 — Waiver (60¢/lb)';
   $('#app').innerHTML=`<div class="modebar">FOREMAN PORTAL</div>
    <div class="card fmwrap"><div class="banner ok" style="margin-top:0">✅ Bill of Lading signed — Job ${job.id}<small>${esc(b.signedAt)}${b.geo?' · GPS '+b.geo.lat+','+b.geo.lng:''}</small></div>
+     ${reviewBanner(b)}
      <div class="grid" style="margin-top:14px">
        <div class="f"><label class="fl">Customer</label><span class="v">${esc(e.customer)}</span></div>
        <div class="f"><label class="fl">Valuation</label><span class="v">${esc(valLbl)}</span></div>
