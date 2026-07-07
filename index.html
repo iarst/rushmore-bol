@@ -14,6 +14,15 @@
   header.app nav{display:flex;gap:4px;align-items:center}
   header.app nav button{background:transparent;color:rgba(255,255,255,.72);border:0;font:inherit;font-weight:600;cursor:pointer;padding:7px 14px;border-radius:999px;transition:background .15s,color .15s}
   header.app nav button:hover{background:rgba(255,255,255,.12);color:#fff} header.app nav button.act{background:var(--gold);color:#2A2200}
+  .hsr{position:relative;display:inline-flex}
+  #hdrSearch{background:rgba(255,255,255,.14);border:0;border-radius:999px;color:#fff;padding:8px 15px;width:220px;max-width:44vw;font:inherit;font-size:13px;transition:background .15s,box-shadow .15s}
+  #hdrSearch::placeholder{color:rgba(255,255,255,.55)}
+  #hdrSearch:focus{outline:none;background:rgba(255,255,255,.22);box-shadow:0 0 0 3px rgba(255,199,0,.35)}
+  #searchRes{display:none;position:absolute;top:42px;right:0;width:430px;max-width:92vw;background:#fff;border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,.24);padding:8px;z-index:100;max-height:70vh;overflow:auto;color:var(--ink);text-align:left}
+  .sr-h{font-size:10.5px;font-weight:800;letter-spacing:.5px;color:var(--muted);text-transform:uppercase;padding:8px 10px 4px}
+  .sr-row{padding:9px 11px;border-radius:10px;cursor:pointer;display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:13.5px}
+  .sr-row:hover{background:#f5f5f2}
+  .sr-row .muted{font-size:11.5px}
   .wrap{max-width:900px;margin:0 auto;padding:26px 16px 90px}
   .modebar{font-size:12px;color:var(--muted);margin:-10px 0 16px;font-weight:600}
   .card{background:var(--card);border:1px solid rgba(0,0,0,.05);border-radius:18px;padding:22px;margin-bottom:18px;box-shadow:0 1px 2px rgba(25,35,18,.04),0 8px 24px rgba(25,35,18,.05)}
@@ -256,8 +265,38 @@ function router(){
   if(h.indexOf('#j=')===0){const id=h.slice(3);$('#nav').innerHTML=navHTML('foreman');$('#app').innerHTML='<div class="card">Loading job…</div>';fetch(BACKEND+'/job/'+encodeURIComponent(id)).then(r=>{if(!r.ok)throw 0;return r.json();}).then(job=>{job.linkId=id;saveJob(job);if(job.foreman&&job.foreman.email)setFm(job.foreman.email);renderFmJob(job.id,true);}).catch(()=>{$('#app').innerHTML='<div class="card">This link could not be opened — it may have expired. Ask the office to resend.</div>';});return;}
   if(h.indexOf('#fm=')===0){try{const job=dec(h.slice(4));if(!getJob(job.id))saveJob(job);if(job.foreman&&job.foreman.email)setFm(job.foreman.email);$('#nav').innerHTML=navHTML('foreman');renderFmJob(job.id,true);}catch(e){$('#app').innerHTML='<div class="card">Invalid link.</div>';}return;}
   if(h.indexOf('#foreman')===0){$('#nav').innerHTML=navHTML('foreman');renderForemanPortal();return;}
-  $('#nav').innerHTML=navHTML('office')+' <button onclick="newJob()">📄 Jobs</button>';render('dashboard');
+  $('#nav').innerHTML='<span class="hsr"><input id="hdrSearch" placeholder="🔎 Search jobs, estimates, contracts" oninput="hdrSearch()" onfocus="hdrSearch()" autocomplete="off"><div id="searchRes"></div></span> '+navHTML('office')+' <button onclick="newJob()">📄 Jobs</button>';render('dashboard');
 }
+/* ---------- header search: board jobs + stored estimates + generated BOLs ---------- */
+let _docsCache=null,_docsTs=0;
+async function ensureDocs(){if(_docsCache&&Date.now()-_docsTs<60000)return _docsCache;
+  try{const[ru,rb]=await Promise.all([fetch(BACKEND+'/estimates/uploads'),fetch(BACKEND+'/bols')]);
+    const du=await ru.json(),db=await rb.json();
+    _docsCache={ups:(du&&du.uploads)||[],bols:(db&&db.bols)||[]};_docsTs=Date.now();}
+  catch(e){_docsCache=_docsCache||{ups:[],bols:[]};}
+  return _docsCache;}
+function srHay(j){const e=j.est||{},b=j.bol||{};
+  const inv=(e.inv&&e.inv.rooms||[]).map(r=>(r.items||[]).map(i=>i.name).join(' ')).join(' ');
+  return [j.id,e.customer,e.phone,e.email,e.oAddr,e.dAddr,e.rep,j.status,(j.foreman&&j.foreman.name)||'',b.custPrinted||'',b.order||'',inv].join(' ').toLowerCase();}
+async function hdrSearch(){const inp=document.getElementById('hdrSearch'),box=document.getElementById('searchRes');if(!inp||!box)return;
+  const q=(inp.value||'').trim().toLowerCase();
+  if(q.length<2){box.style.display='none';box.innerHTML='';return;}
+  const jobs=store.get().filter(j=>srHay(j).includes(q)).slice(0,8);
+  const docs=await ensureDocs();
+  if((inp.value||'').trim().toLowerCase()!==q)return; // stale response
+  const dq=x=>((x.id||'')+' '+(x.customer||'')+' '+(x.filename||'')+' '+(x.total||'')).toLowerCase().includes(q);
+  const ups=docs.ups.filter(dq).slice(0,6),bols=docs.bols.filter(dq).slice(0,6);
+  let h='';
+  if(jobs.length)h+='<div class="sr-h">Jobs on the board</div>'+jobs.map(j=>`<div class="sr-row" onclick="srOpen('${esc(j.id)}')"><span><b>${esc(j.id)}</b> · ${esc(j.est?.customer||'—')}<div class="muted">${esc(szOf(j.est?.oAddr))} → ${esc(szOf(j.est?.dAddr))}${j.foreman?' · '+esc(j.foreman.name):''}</div></span>${statusPill(j.status)}</div>`).join('');
+  if(ups.length)h+='<div class="sr-h">Estimates — original PDFs</div>'+ups.map(u=>`<div class="sr-row" onclick="srDoc('${BACKEND}/estimates/uploads/${esc(u.id)}/pdf')"><span><b>${esc(u.id)}</b> · ${esc(u.customer||'—')}<div class="muted">${esc(u.filename||'')}</div></span><span>📄</span></div>`).join('');
+  if(bols.length)h+='<div class="sr-h">Contracts — generated BOLs</div>'+bols.map(b=>`<div class="sr-row" onclick="srDoc('${BACKEND}/bols/${esc(b.id)}/pdf')"><span><b>${esc(b.id)}</b> · ${esc(b.customer||'—')}<div class="muted">${esc(b.filename||'')}</div></span><span>📑</span></div>`).join('');
+  box.innerHTML=h||`<div class="empty" style="padding:16px">No matches for “${esc(q)}”</div>`;
+  box.style.display='block';}
+function srOpen(id){srHide(true);if(location.hash)location.hash='';openJob(id);}
+function srDoc(url){srHide(false);window.open(url,'_blank');}
+function srHide(clear){const b=document.getElementById('searchRes'),i=document.getElementById('hdrSearch');if(b){b.style.display='none';b.innerHTML='';}if(clear&&i)i.value='';}
+document.addEventListener('click',e=>{if(!e.target.closest||!e.target.closest('.hsr'))srHide(false);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')srHide(false);});
 window.addEventListener('hashchange',router);
 function goOffice(){if(location.hash)location.hash='';else router();}
 function goForeman(){if(location.hash==='#foreman')router();else location.hash='#foreman';}
