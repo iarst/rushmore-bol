@@ -263,7 +263,7 @@ function goOffice(){if(location.hash)location.hash='';else router();}
 function goForeman(){if(location.hash==='#foreman')router();else location.hash='#foreman';}
 
 /* ===== OFFICE ===== */
-function render(v){const a=$('#app');if(v==='dashboard')return a.innerHTML=vDashboard();if(v==='intake')return a.innerHTML=vIntake();if(v==='job')return a.innerHTML=vJob();}
+function render(v){const a=$('#app');if(v==='dashboard')return a.innerHTML=vDashboard();if(v==='intake'){a.innerHTML=vIntake();setTimeout(loadUploads,0);return;}if(v==='job')return a.innerHTML=vJob();}
 function newJob(){cur={id:'tmp'+Date.now(),est:null,foreman:null,eta:null,status:'New',created:now()};if(location.hash)location.hash='';render('intake');}
 function cfLine(j){const v=j.est&&j.est.volume;return v?` · <span style="font-weight:600;color:var(--muted)">${esc(v)} cf</span>`:'';}
 function szOf(a){const m=(a||'').match(/,\s*([A-Z]{2})\s+(\d{5})/);return m?m[1]+' '+m[2]:((a||'').split(',')[1]||'').trim();}
@@ -324,7 +324,42 @@ function vIntake(){
       <div class="dt">📄 Drop the estimate PDF here</div><div class="dd">or click to choose a file — it's parsed exactly like an emailed estimate (inventory, services, charges)</div></div>
     <input type="file" id="upfile" accept="application/pdf,.pdf" style="display:none" onchange="uploadEst(this.files[0]);this.value=''">
     <div id="upmsg" class="muted" style="margin-top:8px"></div>
-    <div class="btnrow"><button class="ghost" onclick="goOffice()">← Back to board</button></div></div>`;}
+    <div class="btnrow"><button class="ghost" onclick="goOffice()">← Back to board</button></div></div>
+
+    <div class="card"><h2>Stored estimates</h2><p class="sub">Every original estimate PDF that entered the system — emailed to <b>estimates@</b> or uploaded here. View the source document, re-parse it onto the board, or delete the stored copy.</p>
+    <div id="upList" class="joblist"><div class="muted">Loading…</div></div></div>`;}
+async function loadUploads(){const box=document.getElementById('upList');if(!box)return;
+  try{
+    const r=await fetch(BACKEND+'/estimates/uploads');const d=await r.json();
+    if(!d.ok)throw new Error(d.error||'failed');
+    if(!(d.uploads||[]).length){box.innerHTML='<div class="empty">No stored estimate PDFs yet — drop one above, or pull new ones in from estimates@.</div>';return;}
+    box.innerHTML=d.uploads.map(u=>`<div class="jobrow" style="cursor:default">
+      <div style="flex:1"><div class="id">${esc(u.id)} · ${esc(u.customer||'—')}${u.total?` · <span style="font-weight:600;color:var(--muted)">$${esc((+u.total).toLocaleString(undefined,{minimumFractionDigits:2}))}</span>`:''}</div>
+        <div class="meta">${esc(u.filename||'')} · ${Math.max(1,Math.round((u.size||0)/1024))} KB · ${u.source==='inbox'?'<span style="color:#1D9E75">📥 estimates@</span>':'<span style="color:#0058B0">📄 uploaded</span>'} · ${esc((u.uploaded||'').slice(0,10))}</div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="sm ghost" onclick="window.open('${BACKEND}/estimates/uploads/${esc(u.id)}/pdf','_blank')">👁 View</button>
+        <button class="sm ghost" onclick="reparseUpload('${esc(u.id)}',this)">↻ Re-parse</button>
+        <button class="sm ghost" style="color:#D70015" onclick="deleteUpload('${esc(u.id)}',this)">🗑</button></div></div>`).join('');
+  }catch(e){box.innerHTML='<div class="empty">Could not load stored estimates ('+esc(e.message)+') — the backend may be waking up.</div>';}}
+async function reparseUpload(id,btn){const o=btn.textContent;btn.textContent='⏳';btn.disabled=true;
+  try{
+    const r=await fetch(BACKEND+'/estimates/uploads/'+encodeURIComponent(id)+'/reparse',{method:'POST'});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||!d.ok)throw new Error(d.error||('HTTP '+r.status));
+    const ex=getJob(d.job.id);
+    if(ex&&d.updated){ex.est=d.job.est;ex.reparsed=d.job.reparsed;saveJob(ex);}else if(!ex)saveJob(d.job);
+    btn.textContent=o;btn.disabled=false;
+    alert('Job '+d.job.id+' '+(d.updated?'re-parsed and updated on the board (dispatch state kept).':'parsed and added to the board.'));
+  }catch(e){btn.textContent=o;btn.disabled=false;alert('Re-parse failed: '+e.message);}}
+async function deleteUpload(id,btn){
+  if(!confirm('Delete the STORED PDF for estimate '+id+'?\n\nThis removes only the saved source document — the job on the dispatch board is not touched.'))return;
+  btn.disabled=true;
+  try{
+    const r=await fetch(BACKEND+'/estimates/uploads/'+encodeURIComponent(id)+'/delete',{method:'POST'});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||!d.ok)throw new Error(d.error||('HTTP '+r.status));
+    loadUploads();
+  }catch(e){btn.disabled=false;alert('Delete failed: '+e.message);}}
 function dropEst(ev){ev.preventDefault();const d=document.getElementById('updrop');d.classList.remove('over');const f=ev.dataTransfer.files&&ev.dataTransfer.files[0];if(f)uploadEst(f);}
 function dropReset(){const d=document.getElementById('updrop');if(!d)return;d.classList.remove('busy');
   d.querySelector('.dt').textContent='📄 Drop the estimate PDF here';
