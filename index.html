@@ -586,6 +586,8 @@ function estimateHTML(e){
   if(+e.discount)rows.push(`<div class="kv"><span class="k">Discount</span><span style="color:var(--ok);font-weight:700">− ${money(+e.discount)}</span></div>`);
   rows.push(`<div class="kv" style="border-top:2px solid var(--navy);border-bottom:0"><span class="k" style="color:var(--navy);font-weight:800">TOTAL MOVING ESTIMATE</span><span style="font-weight:800;color:var(--navy)">${money(+e.total||0)}</span></div>`);
   if(+e.deposit)rows.push(`<div class="kv"><span class="k">Deposit paid at booking</span><span>− ${money(+e.deposit)}</span></div>`);
+  if(+e.total){const bal=Math.round(((+e.total||0)-(+e.deposit||0))*100)/100;
+    rows.push(`<div class="kv" style="background:var(--okbg);border-radius:10px;padding:10px 12px;border-bottom:0;margin-top:6px"><span class="k" style="color:#1B6B30;font-weight:800">BALANCE DUE TO CARRIER <span style="font-weight:600">(total − deposit)</span></span><span style="font-weight:800;color:#1B6B30;font-size:17px">${money(bal)}</span></div>`);}
   return rows.join('')||'<p class="muted">No parsed charges on this estimate.</p>';
 }
 function renderFmJob(id,fromLink){
@@ -621,7 +623,7 @@ function renderFmJob(id,fromLink){
    </div>
    <div class="card"><h3 class="sg">🧾 Job estimate ${e.estimateDate?`<span class="muted" style="font-weight:600">· ${esc(e.estimateDate)}</span>`:''}</h3>
      ${estimateHTML(e)}
-     <div class="btnrow"><button class="ghost sm" onclick="window.open('${BACKEND}/estimates/uploads/${esc(job.id)}/pdf','_blank')">📄 View the original estimate (PDF)</button></div></div>
+     <div class="btnrow"><button class="alt" style="width:100%;font-size:15.5px;padding:14px 20px" onclick="window.open('${BACKEND}/estimates/uploads/${esc(job.id)}/pdf','_blank')">📄 View the original estimate (PDF) →</button></div></div>
    ${done?`<div class="card">
     <h3 class="sg">Change pickup window</h3><p class="muted" style="margin:-4px 0 10px">Currently confirmed: ${esc(job.eta.whenLabel)}.</p>
     ${etaForm}</div>`:''}`;
