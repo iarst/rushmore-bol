@@ -730,7 +730,7 @@ function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);cons
     dedicatedTruck:'',expeditedDate:'',stairsFlights:'',extraLaborHrs:'',
     fullPackChoice:(_packA>0?'Yes':(e.fullPack?'Yes':'No')),packCf:(_vol||''),packRateCf:_packRate.toFixed(2),packMaterials:[],materialsNote:'',packTotal:'',
     storageChoice:'No',storageStart:'',storageEnd:'',ttAccessChoice:'Tractor-trailer access available',dwellingO:e.oType||'Private Home',dwellingD:e.dType||'Private Home',walkupFlights:'',accessDenied:false,accessExplain:'',
-    exceptions:'',customCharges:_cc,consent:false,custSig:'',foreSig:'',custPrinted:'',custInit:''},b);}
+    exceptions:'',customCharges:_cc,consent:false,custSig:'',foreSig:'',custPrinted:'',custInit:'',faddInit:''},b);}
 function openBOL(id){renderBOL(id);}
 function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e=job.est||{};const p=payments(e);const s=_bolSeed=bolSeed(job);
   try{if(navigator.geolocation)navigator.geolocation.getCurrentPosition(g=>{window._geo={lat:+g.coords.latitude.toFixed(5),lng:+g.coords.longitude.toFixed(5),at:now()};},()=>{},{timeout:6000});}catch(_){}
@@ -766,7 +766,12 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
        <div class="f"><label class="fl">Agreed pick-up date</label><input type="date" id="b_agreedPickup" value="${esc(s.agreedPickup)}"></div>
        <div class="f tr"><label class="fl">Actual pick-up date <span class="req">*</span><span class="tag tag-r">REQUIRED</span></label><input type="date" id="b_actualPickup" value="${esc(s.actualPickup)}"></div>
        <div class="f tr"><label class="fl">1st available delivery <span class="req">*</span><span class="tag tag-r">REQUIRED</span></label><input type="date" id="b_firstAvail" value="${esc(s.firstAvail)}"></div>
-       <div class="f"><label class="fl">Delivery no later than</label><input type="date" id="b_deliverNoLater" value="${esc(s.deliverNoLater)}"></div></div></div>
+       <div class="f"><label class="fl">Delivery no later than</label><input type="date" id="b_deliverNoLater" value="${esc(s.deliverNoLater)}"></div></div>
+     <div style="margin-top:12px;border:1.5px dashed rgba(154,106,0,.5);background:#FFFBEB;border-radius:12px;padding:12px 14px">
+       <div style="font-weight:800;color:#8A6D00;font-size:12px;letter-spacing:.3px;margin-bottom:5px">⚠ EXPLAIN TO THE CUSTOMER — "1ST AVAILABLE DELIVERY" IS <u>NOT</u> THE DELIVERY DATE</div>
+       <div style="font-size:13.5px;color:#6B5500;line-height:1.55;margin-bottom:10px">It is the <b>first day the customer is able to RECEIVE the shipment</b> at destination. The delivery window <b>starts</b> on this date — actual delivery can be any day from then until the "no later than" date. Have the customer initial to confirm they understand.</div>
+       <div class="padlbl" style="margin-bottom:4px"><b>Customer initials</b> — "I understand the 1st available delivery date is when my delivery window OPENS, not my delivery date." <span class="req">*</span></div>
+       <div class="padwrap"><canvas class="pad padsm" id="b_faddInit"></canvas><button class="padclear" type="button" onclick="padClear('b_faddInit')">Clear</button></div></div></div>
 
    <div class="bolsec"><h4><span class="step">2</span> Origin information <span class="tag tag-y">AUTO</span></h4>
      <div class="twocol">
@@ -793,7 +798,7 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      <div id="waiverInit" style="display:${s.valuation==='waiver'?'':'none'};margin-top:10px;border:1.5px dashed rgba(154,106,0,.5);background:#FFFBEB;border-radius:12px;padding:11px 14px">
        <div class="padlbl" style="margin-bottom:4px"><b>Customer initials</b> — Option 2 requires the customer to INITIAL the 60¢/lb waiver election <span class="req">*</span></div>
        <div class="padwrap"><canvas class="pad padsm" id="b_custInit"></canvas><button class="padclear" type="button" onclick="padClear('b_custInit')">Clear</button></div></div>
-     <div class="twocol" style="margin-top:8px">
+     <div class="twocol" id="fullVal" style="margin-top:8px;display:${s.valuation==='full'?'':'none'}">
        <div class="f"><label class="fl">Declared total value (Option 1)</label><input id="b_declaredValue" value="${esc(s.declaredValue)}" placeholder="$"></div>
        <div class="f"><label class="fl">FVP cost estimate (carrier)</label><input id="b_fvpEstimate" value="${esc(s.fvpEstimate)}" placeholder="$"></div></div></div>
    <div class="sigblock" id="sig_valuation"></div>
@@ -880,7 +885,7 @@ function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e
      <p class="muted" id="sigCount2" style="margin:0 0 10px"></p>
      <div class="btnrow"><button onclick="generateBOL('${job.id}')">✅ Generate signed Bill of Lading</button><button class="ghost" onclick="openFmJob('${job.id}')">Cancel</button></div>
      <p class="muted" style="margin-top:8px">All section signatures, timestamps, device &amp; (if allowed) location are captured for the audit trail. Delivery acknowledgements are signed at delivery.</p></div>`;
-  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');toggleWaiverInit();window._sigState={ack:{}};fillSigBlocks();((s.customCharges)||[]).forEach(c=>addCustomCharge(c.label,c.amt));recalcTotal();toggleStorage();togglePack();},30);
+  setTimeout(()=>{padSetup('b_custSig');padSetup('b_foreSig');padSetup('b_faddInit');toggleWaiverInit();window._sigState={ack:{}};fillSigBlocks();((s.customCharges)||[]).forEach(c=>addCustomCharge(c.label,c.amt));recalcTotal();toggleStorage();togglePack();},30);
   window.scrollTo(0,0);
 }
 function recalcFuel(){const g=id=>{const el=document.getElementById(id);return el?(num(el.value)||0):0;};
@@ -949,8 +954,9 @@ function clearSig(key,who){const st=window._sigState||{ack:{}};if(st.ack[key])de
 function updateSigCount(){const st=window._sigState||{ack:{}};let need=0,have=0;SIGPTS.forEach(pt=>pt.who.forEach(w=>{need++;if(st.ack[pt.key]&&st.ack[pt.key][w])have++;}));
   const txt=`<b>${have} of ${need}</b> section signatures collected.`+(have<need?'':' ✓ All set.');[document.getElementById('sigCount'),document.getElementById('sigCount2')].forEach(c=>{if(c)c.innerHTML=txt;});}
 function bolSel(el){[...el.parentNode.querySelectorAll('.opt')].forEach(o=>o.classList.remove('sel'));el.classList.add('sel');el.querySelector('input').checked=true;if(document.getElementById('sig_valuation'))refreshSig('valuation');toggleWaiverInit();}
-function toggleWaiverInit(){const v=(document.querySelector('input[name=b_val]:checked')||{}).value;const d=document.getElementById('waiverInit');if(!d)return;
-  d.style.display=(v==='waiver')?'':'none';
+function toggleWaiverInit(){const v=(document.querySelector('input[name=b_val]:checked')||{}).value;
+  const d=document.getElementById('waiverInit');if(d)d.style.display=(v==='waiver')?'':'none';
+  const f=document.getElementById('fullVal');if(f)f.style.display=(v==='full')?'':'none';
   const c=document.getElementById('b_custInit');
   if(v==='waiver'&&c&&!c.dataset.init){padSetup('b_custInit');c.dataset.init='1';}}
 function padSetup(id){const c=document.getElementById(id);if(!c)return;const r=c.getBoundingClientRect();const dpr=window.devicePixelRatio||1;c.width=Math.max(1,r.width*dpr);c.height=Math.max(1,r.height*dpr);const ctx=c.getContext('2d');ctx.scale(dpr,dpr);ctx.lineWidth=2.2;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#1d1d1f';c.dataset.drawn='';let drawing=false,last=null;
@@ -987,6 +993,8 @@ function generateBOL(id){const v=s=>{const el=document.getElementById(s);return 
   if(!printed)miss.push('customer printed name (verify identity against the contract)');
   const init=padData('b_custInit');
   if(val==='waiver'&&!init)miss.push('customer initials (required for Option 2 — 60¢/lb waiver)');
+  const faddInit=padData('b_faddInit');
+  if(!faddInit)miss.push('customer initials — 1st available delivery acknowledgment');
   let sigMiss=0;SIGPTS.forEach(pt=>pt.who.forEach(w=>{if(!(st.ack[pt.key]&&st.ack[pt.key][w]))sigMiss++;}));
   if(sigMiss)miss.push(sigMiss+' signature(s) still needed');
   if(miss.length){const f=document.querySelector('.miss');if(f)f.scrollIntoView({behavior:'smooth',block:'center'});alert('Please complete the required fields:\n• '+miss.join('\n• '));return;}
@@ -1017,7 +1025,7 @@ function generateBOL(id){const v=s=>{const el=document.getElementById(s);return 
     storage:(v('b_storage')==='Yes'),storageChoice:v('b_storage'),storageStart:v('b_storageStart'),storageEnd:v('b_storageEnd'),ttAccess:(v('b_ttAccess')==='Tractor-trailer access available'),ttAccessChoice:v('b_ttAccess'),dwellingO:v('b_dwellingO'),dwellingD:v('b_dwellingD'),walkupFlights:v('b_walkupFlights'),accessDenied:ck('b_accessDenied'),accessExplain:v('b_accessExplain'),
     exceptions:v('b_exceptions'),originAmt:v('b_payOrigin'),
     customCharges:[...document.querySelectorAll('#customCharges .ccrow')].map(r=>({label:r.querySelector('.cclabel').value.trim(),amt:r.querySelector('.ccamt').value.trim()})).filter(c=>num(c.amt)),
-    sigs:st.ack,consent:true,custSig:cust,foreSig:fore,custPrinted:printed,custInit:init||'',signed:true,signedAt:now(),device:(navigator.userAgent||'').slice(0,70),geo:window._geo||null});
+    sigs:st.ack,consent:true,custSig:cust,foreSig:fore,custPrinted:printed,custInit:init||'',faddInit:faddInit||'',signed:true,signedAt:now(),device:(navigator.userAgent||'').slice(0,70),geo:window._geo||null});
   job.bol=bol;job.bol.review={state:'pending',submittedAt:now()};job.status='Review';saveJob(job);renderBOLDone(id);}
 function reviewBanner(b){const rv=(b&&b.review)||{};
   if(rv.state==='approved')return `<div class="banner ok" style="margin-top:12px">✅ Approved by the office<small>${esc(rv.at||'')} · the customer was emailed a copy</small></div>`;
@@ -1090,7 +1098,7 @@ function backendPayload(job){const e=job.est||{},b=job.bol||{};const oc=parseCSZ
     ttAccess:b.ttAccess,storage:b.storage,dwellingO:b.dwellingO,volume:e.volume,rate:e.rate,packTotal:b.packTotal,
     sigs:{valuation:sg('valuation','cust'),documents:sg('documents','cust'),bolReceipt_cust:sg('bolReceipt','cust'),bolReceipt_carrier:sg('bolReceipt','carrier'),
       pickup_cust:sg('pickup','cust'),pickup_carrier:sg('pickup','carrier'),accessorial_cust:sg('accessorial','cust'),accessorial_carrier:sg('accessorial','carrier'),
-      ldf:sg('ldf','cust'),pms_cust:sg('pms','cust'),pms_carrier:sg('pms','carrier'),valuationInitials:(b.valuation==='waiver'?(b.custInit||''):'')}};}
+      ldf:sg('ldf','cust'),pms_cust:sg('pms','cust'),pms_carrier:sg('pms','carrier'),valuationInitials:(b.valuation==='waiver'?(b.custInit||''):''),faddInitials:(b.faddInit||'')}};}
 function generateOfficialBOL(id){const job=getJob(id);if(!job||!job.bol){alert('Sign the Bill of Lading first.');return;}
   // open the new window NOW, inside the click, so the popup blocker allows it; fill it once the PDF is ready
   const w=window.open('','_blank');
