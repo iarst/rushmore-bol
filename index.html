@@ -246,7 +246,61 @@ function rotateCard(id){if(!confirm('Rotate the card link?\n\nThe OLD link stops
 function copyCard(id){const j=getJob(id);const t=cardLink(j);(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{const b=event.target;const o=b.textContent;b.textContent='✓ Copied';setTimeout(()=>b.textContent=o,1500);}).catch(()=>prompt('Copy this link:',t));}
 function emailCard(id){const j=getJob(id);location.href='mailto:?subject='+encodeURIComponent('Pickup job '+j.id+' — customer card')+'&body='+encodeURIComponent('Open this customer card on site: job details, inventory, and the Bill of Lading to fill & sign.\n\n'+cardLink(j)+'\n\nJob '+j.id+' · '+((j.est&&j.est.customer)||''));}
 function crewMe(){try{return JSON.parse(localStorage.getItem('rvl_crew')||'null');}catch(e){return null;}}
+/* ---------- signing audit log ---------- */
+function prefetchIP(){try{fetch(BACKEND+'/whoami').then(r=>r.json()).then(d=>{window._ip=(d&&d.ip)||'';}).catch(()=>{});}catch(e){}}
+function logEvent(job,label,detail){job.events=(job.events||[]);job.events.push({label:label,detail:detail||'',at:now(),ip:window._ip||'',geo:window._geo||null,device:(navigator.userAgent||'').slice(0,80)});}
+function renderAuditLog(id){
+  const j=getJob(id);if(!j){goOffice();return;}
+  const e=j.est||{},b=j.bol||{};
+  const kv=(k,v)=>v?`<div class="kv"><span class="k">${k}</span><span style="text-align:right">${v}</span></div>`:'';
+  const gps=g=>g?`${g.lat}, ${g.lng} <a href="https://maps.google.com/?q=${g.lat},${g.lng}" target="_blank">map</a>`:'';
+  // signatures with their own timestamps
+  const sigRows=SIGPTS.map(pt=>{const a=(b.sigs||{})[pt.key]||{};
+    return pt.who.map(w=>{const sg=a[w];if(!sg)return '';
+      return `<div class="kv"><span class="k">${esc(sigLabelDoc(b,pt.key))} — ${w==='cust'?'Customer':'Foreman'}</span><span style="text-align:right"><img src="${sg.img}" style="height:26px;vertical-align:middle;border-bottom:1px solid #c6c6c8"> <span class="muted">${esc(sg.ts||'')}</span></span></div>`;}).join('');}).join('');
+  // event history (recorded events + derived milestones for older jobs)
+  const evts=(j.events&&j.events.length?j.events:[
+    j.created?{label:'Job created from estimate',at:j.created}:null,
+    j.assignedAt?{label:'Foreman assigned'+(j.foreman?' — '+j.foreman.name:''),at:j.assignedAt}:null,
+    j.crew?{label:'Customer card opened / crew identified',detail:j.crew.name+' · '+j.crew.phone,at:j.crew.openedAt,ip:j.crew.ip,device:j.crew.device}:null,
+    j.eta?{label:'Pickup window confirmed',detail:j.eta.whenLabel,at:j.eta.submittedAt}:null,
+    b.signedAt?{label:'Bill of Lading signed & submitted',detail:(b.custPrinted?'printed name '+b.custPrinted:''),at:b.signedAt,ip:b.ip,geo:b.geo,device:b.device}:null,
+    (b.review&&b.review.at)?{label:b.review.state==='approved'?'BOL approved by office':'BOL sent back by office',detail:b.review.note||'',at:b.review.at}:null
+  ].filter(Boolean));
+  const evHtml=evts.map(ev=>`<div class="note"><b>${esc(ev.at||'')}</b> — ${esc(ev.label)}${ev.detail?' · '+esc(ev.detail):''}
+    ${(ev.ip||ev.geo||ev.device)?`<div class="muted" style="margin-top:2px">${ev.ip?'IP '+esc(ev.ip)+' · ':''}${ev.geo?'GPS '+gps(ev.geo)+' · ':''}${esc((ev.device||'').slice(0,60))}</div>`:''}</div>`).join('')||'<p class="muted">No recorded events yet.</p>';
+  $('#app').innerHTML=`<div class="btnrow noprint" style="margin:0 0 12px"><button class="ghost sm" onclick="openJob('${j.id}')">← Back to job</button><button class="sm" onclick="window.print()">🖨️ Print / save as PDF</button></div>
+   <div class="card">
+    <div class="sheethead"><div><div class="brand">RUSHMORE VAN LINES</div><div class="muted">Certificate of signing &amp; audit trail · electronic record</div></div>
+      <div style="text-align:right"><div style="font-weight:800;font-size:16px">Job ${esc(j.id)}</div><div class="muted">${esc(e.customer||'')}</div></div></div>
+    <h3 class="sg" style="margin-top:14px">Document</h3>
+    ${kv('Contract','Interstate Bill of Lading — CSI packet (BOL face + T&amp;C + AS-22 + LDF-08 + PMS-19)')}
+    ${kv('Order / job #',esc(b.order||j.id))}
+    ${kv('Route',esc(e.oAddr||'')+' → '+esc(e.dAddr||''))}
+    ${kv('Signed / completed',esc(b.signedAt||'— not signed yet'))}
+    ${kv('Review state',b.review?esc(b.review.state)+(b.review.at?' · '+esc(b.review.at):''):'')}
+    <h3 class="sg" style="margin-top:16px">Signers</h3>
+    ${kv('Customer (printed by signer)','<b>'+esc(b.custPrinted||'—')+'</b>'+(b.custSig?' · <img src="'+b.custSig+'" style="height:26px;vertical-align:middle;border-bottom:1px solid #c6c6c8">':''))}
+    ${kv('Customer on contract',esc(e.customer||'—')+(e.phone?' · '+esc(e.phone):'')+(e.email?' · '+esc(e.email):''))}
+    ${kv('Crew / foreman',esc((j.crew&&(j.crew.name+' · '+j.crew.phone))||(j.foreman&&(j.foreman.name+' · '+j.foreman.email))||'—')+(b.foreSig?' · <img src="'+b.foreSig+'" style="height:26px;vertical-align:middle;border-bottom:1px solid #c6c6c8">':''))}
+    ${kv('E-sign consent',b.consent?'✓ customer consented to sign electronically on the crew device':'')}
+    <h3 class="sg" style="margin-top:16px">Signing environment</h3>
+    ${kv('IP address',esc(b.ip||(j.crew&&j.crew.ip)||''))}
+    ${kv('GPS at signing',b.geo?gps(b.geo)+(b.geo.at?' · '+esc(b.geo.at):''):'')}
+    ${kv('Device',esc(b.device||(j.crew&&j.crew.device)||''))}
+    ${kv('Card link security','rotating token'+(j.cardToken?' (active)':'')+' · crew self-identification required')}
+    <h3 class="sg" style="margin-top:16px">Section signatures — individually timestamped</h3>
+    ${sigRows||'<p class="muted">No section signatures captured yet.</p>'}
+    ${b.custInit?kv('Customer initials — 60¢/lb waiver election','<img src="'+b.custInit+'" style="height:24px;border-bottom:1px solid #c6c6c8">'):''}
+    ${b.faddInit?kv('Customer initials — 1st available delivery acknowledgment','<img src="'+b.faddInit+'" style="height:24px;border-bottom:1px solid #c6c6c8">'):''}
+    <h3 class="sg" style="margin-top:16px">Event history</h3>
+    ${evHtml}
+    <p class="muted" style="margin-top:14px">This certificate is generated from the electronic signing record stored in Rushmore Van Lines' shared job database. Each section signature carries its own timestamp; the submission carries the signing device's IP address and GPS position (when permitted).</p>
+   </div>`;
+  window.scrollTo(0,0);
+}
 function renderCardGate(id){
+  prefetchIP();
   const j=getJob(id);if(!j){$('#app').innerHTML='<div class="card">Job not found.</div>';return;}
   const me=crewMe();
   if(me&&j.crew&&j.crew.phone===me.phone){renderFmJob(id,true);return;}
@@ -260,8 +314,9 @@ function renderCardGate(id){
 function crewEnter(id){const n=$('#crewName').value.trim(),p=$('#crewPhone').value.trim();
   if(!n||!p){alert('Enter your name and phone — the office needs to know who is filling the paperwork.');return;}
   const j=getJob(id);if(!j)return;
-  j.crew={name:n,phone:p,openedAt:now(),device:(navigator.userAgent||'').slice(0,60)};
+  j.crew={name:n,phone:p,openedAt:now(),device:(navigator.userAgent||'').slice(0,60),ip:window._ip||''};
   j.crewLog=(j.crewLog||[]).concat([j.crew]);
+  logEvent(j,'Customer card opened / crew identified',n+' · '+p);
   if(j.status==='New')j.status='Assigned';
   try{localStorage.setItem('rvl_crew',JSON.stringify({name:n,phone:p}));}catch(e){}
   saveJob(j);renderFmJob(id,true);
@@ -484,7 +539,7 @@ function vJob(){
       <p class="muted" style="margin:-4px 0 10px">Signed ${esc(j.bol.signedAt||'')} · printed name <b>${esc(j.bol.custPrinted||'—')}</b> · crew ${esc((j.crew&&j.crew.name)||(j.foreman&&j.foreman.name)||'—')}.
         ${rv.state==='rejected'?'<br><b style="color:var(--bad)">Sent back:</b> '+esc(rv.note||''):''}
         ${rv.state==='approved'?'<br>Approved '+esc(rv.at||'')+' — packet generated, stored &amp; emailed to the customer.':''}</p>
-      <div class="btnrow"><button class="ghost sm" onclick="openBOLDoc('${j.id}')">📄 Review the e-BOL</button><button class="ghost sm" onclick="generateOfficialBOL('${j.id}')">📑 Official PDF</button><button class="ghost sm" onclick="openBOL('${j.id}')">✏️ Office edit</button>
+      <div class="btnrow"><button class="ghost sm" onclick="openBOLDoc('${j.id}')">📄 Review the e-BOL</button><button class="ghost sm" onclick="generateOfficialBOL('${j.id}')">📑 Official PDF</button><button class="ghost sm" onclick="openBOL('${j.id}')">✏️ Office edit</button><button class="ghost sm" onclick="renderAuditLog('${j.id}')">🧾 Signing log</button>
       ${rv.state!=='approved'?`<button class="sm" style="background:var(--ok)" onclick="approveBOL('${j.id}')">✅ Approve &amp; email customer</button><button class="sm ghost" style="color:var(--bad)" onclick="rejectBOL('${j.id}')">↩ Send back to fix</button>`:''}</div></div>`;}
   let assignBlock;
   if(!j.foreman){
@@ -531,11 +586,15 @@ async function approveBOL(id){const job=getJob(id);if(!job||!job.bol){alert('No 
   try{
     const r=await fetch(BACKEND+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pl)});
     if(!r.ok)throw new Error('server '+r.status);
-    job.bol.review={state:'approved',at:now()};job.status='Done';saveJob(job);cur=getJob(id);render('job');
+    job.bol.review={state:'approved',at:now()};job.status='Done';
+    logEvent(job,'BOL approved by office','packet generated & stored'+(to?' · customer copy emailed to '+to:''));
+    saveJob(job);cur=getJob(id);render('job');
   }catch(e){alert('Could not generate the packet ('+e.message+') — the backend may be waking up. Try again in ~40s.');}}
 function rejectBOL(id){const job=getJob(id);if(!job||!job.bol)return;
   const note=prompt('What must be fixed? (the crew sees this note on the job)');if(note==null)return;
-  job.bol.review={state:'rejected',note:note.trim(),at:now()};job.status='Review';saveJob(job);cur=getJob(id);render('job');}
+  job.bol.review={state:'rejected',note:note.trim(),at:now()};job.status='Review';
+  logEvent(job,'BOL sent back by office',note.trim());
+  saveJob(job);cur=getJob(id);render('job');}
 function assignForeman(){const fm=foremenStore.get();const i=+$('#fmSel').value;cur.foreman=fm[i];cur.assignedAt=now();cur.status='Assigned';saveJob(cur);render('job');}
 function addForeman(){const n=$('#nfn').value.trim(),em=$('#nfe').value.trim();if(!n){alert('Enter a name.');return;}const fm=foremenStore.get();fm.push({name:n,email:em});foremenStore.set(fm);render('job');}
 function copyLink(){const t=CURLINK||foremanLink(cur);(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{const b=event.target;b.textContent='✓ Copied';setTimeout(()=>b.textContent='📋 Copy link',1500);}).catch(()=>prompt('Copy this link:',t));}
@@ -633,7 +692,7 @@ function submitETA(id){const dt=$('#etaDate').value,win=$('#etaWin').value;
   if(!dt){alert('Pick a pickup date.');return;}if(!win){alert('Choose a 3-hour arrival window.');return;}
   const dl=new Date(dt+'T00:00').toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
   const eta={date:dt,window:win,whenLabel:dl+' · '+win,note:$('#etaNote').value.trim(),submittedAt:now()};
-  const job=getJob(id);if(!job)return;job.eta=eta;job.status='Scheduled';saveJob(job);renderFmJob(id,false);window.scrollTo(0,0);}
+  const job=getJob(id);if(!job)return;job.eta=eta;job.status='Scheduled';logEvent(job,'Pickup window confirmed',eta.whenLabel+(eta.note?' — '+eta.note:''));saveJob(job);renderFmJob(id,false);window.scrollTo(0,0);}
 
 /* ===== JOB SHEET (contract + inventory + crew notes) ===== */
 function crewNotes(e){
@@ -733,6 +792,7 @@ function bolSeed(job){const e=job.est||{},b=job.bol||{};const p=payments(e);cons
     exceptions:'',customCharges:_cc,consent:false,custSig:'',foreSig:'',custPrinted:'',custInit:'',faddInit:''},b);}
 function openBOL(id){renderBOL(id);}
 function renderBOL(id){const job=getJob(id);if(!job){goForeman();return;}const e=job.est||{};const p=payments(e);const s=_bolSeed=bolSeed(job);
+  prefetchIP();
   try{if(navigator.geolocation)navigator.geolocation.getCurrentPosition(g=>{window._geo={lat:+g.coords.latitude.toFixed(5),lng:+g.coords.longitude.toFixed(5),at:now()};},()=>{},{timeout:6000});}catch(_){}
   const dw=v=>['Private Home','Apartment','Building Elevator','Walk-Up','Storage'].map(o=>`<option ${v===o?'selected':''}>${o}</option>`).join('');
   const A=(id,v)=>`<input id="${id}" class="mny" value="${(v!==''&&v!=null)?esc(v):''}" placeholder="$" oninput="recalcTotal()">`;
@@ -1025,8 +1085,10 @@ function generateBOL(id){const v=s=>{const el=document.getElementById(s);return 
     storage:(v('b_storage')==='Yes'),storageChoice:v('b_storage'),storageStart:v('b_storageStart'),storageEnd:v('b_storageEnd'),ttAccess:(v('b_ttAccess')==='Tractor-trailer access available'),ttAccessChoice:v('b_ttAccess'),dwellingO:v('b_dwellingO'),dwellingD:v('b_dwellingD'),walkupFlights:v('b_walkupFlights'),accessDenied:ck('b_accessDenied'),accessExplain:v('b_accessExplain'),
     exceptions:v('b_exceptions'),originAmt:v('b_payOrigin'),
     customCharges:[...document.querySelectorAll('#customCharges .ccrow')].map(r=>({label:r.querySelector('.cclabel').value.trim(),amt:r.querySelector('.ccamt').value.trim()})).filter(c=>num(c.amt)),
-    sigs:st.ack,consent:true,custSig:cust,foreSig:fore,custPrinted:printed,custInit:init||'',faddInit:faddInit||'',signed:true,signedAt:now(),device:(navigator.userAgent||'').slice(0,70),geo:window._geo||null});
-  job.bol=bol;job.bol.review={state:'pending',submittedAt:now()};job.status='Review';saveJob(job);renderBOLDone(id);}
+    sigs:st.ack,consent:true,custSig:cust,foreSig:fore,custPrinted:printed,custInit:init||'',faddInit:faddInit||'',signed:true,signedAt:now(),device:(navigator.userAgent||'').slice(0,70),geo:window._geo||null,ip:window._ip||''});
+  job.bol=bol;job.bol.review={state:'pending',submittedAt:now()};job.status='Review';
+  logEvent(job,'Bill of Lading signed & submitted for review','printed name '+printed+(bol.geo?' · GPS '+bol.geo.lat+','+bol.geo.lng:'')+(bol.ip?' · IP '+bol.ip:''));
+  saveJob(job);renderBOLDone(id);}
 function reviewBanner(b){const rv=(b&&b.review)||{};
   if(rv.state==='approved')return `<div class="banner ok" style="margin-top:12px">✅ Approved by the office<small>${esc(rv.at||'')} · the customer was emailed a copy</small></div>`;
   if(rv.state==='rejected')return `<div class="banner" style="margin-top:12px;background:var(--badbg);border:1px solid rgba(215,0,21,.25);color:#A50010">↩ The office sent this BOL back to fix:<small style="opacity:1;font-weight:700">“${esc(rv.note||'')}”</small></div>`;
@@ -1111,8 +1173,7 @@ function generateOfficialBOL(id){const job=getJob(id);if(!job||!job.bol){alert('
     .finally(()=>{if(btn){btn.disabled=false;btn.textContent=orig;}});}
 function openBOLDoc(id){renderBOLDoc(id);}
 function bolMoney(x){return money(num(x)||0);}
-function sigLabelDoc(b,key){if(key==='valuation')return 'Valuation election — '+(b.valuation==='full'?'Option 1, Full Value':'Option 2, 60¢/lb waiver');const pt=SIGPTS.find(p=>p.key===key);return pt?pt.label:key;}
-function docSig(b,key){const pt=SIGPTS.find(p=>p.key===key);if(!pt)return '';const a=(b.sigs||{})[key]||{};
+function sigLabelDoc(b,key){if(key==='valuation')return 'Valuation election — '+(b.valuation==='full'?'Option 1, Full Value':'Option 2, 60¢/lb waiver');const pt=SIGPTS.find(p=>p.key===key);return pt?pt.label:key;}function docSig(b,key){const pt=SIGPTS.find(p=>p.key===key);if(!pt)return '';const a=(b.sigs||{})[key]||{};
   const dtxt=(key==='valuation')?(b.valuation==='full'?FULL_TEXT:WAIVER_TEXT):(SIG_TEXT[key]||'');
   return `<div class="docack"><div class="dackt"><b>${esc(sigLabelDoc(b,key))}.</b> ${esc(dtxt)}</div><div class="docsigs">${pt.who.map(w=>{const sg=a[w];const who=w==='cust'?("Customer's signature &amp; date"+(b.custPrinted?' — printed name: '+esc(b.custPrinted):'')):"Carrier / foreman signature &amp; date";return `<div class="docsig">${sg?`<img src="${sg.img}">`:'<div style="height:44px"></div>'}<div class="docsigln">${who}${sg?' · '+esc(sg.ts):''}</div></div>`;}).join('')}</div></div>`;}
 function renderBOLDoc(id){const j=getJob(id);if(!j||!j.bol){goForeman();return;}const e=j.est||{},b=j.bol;
