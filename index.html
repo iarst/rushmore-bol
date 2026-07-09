@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rushmore Dispatch — MVP</title>
+<meta name="theme-color" content="#2A3B22">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Rushmore">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="icon" href="data:image/png;base64,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">
 <style>
   :root{--navy:#2E4027;--blue:#3E6034;--gold:#FFC700;--golddk:#8A6D00;--ink:#1d1d1f;--muted:#86868b;--line:rgba(0,0,0,.08);--bg:#f5f5f2;--card:#fff;
     --ok:#248A3D;--okbg:#E9F5EC;--warn:#9A6A00;--warnbg:#FBF2D9;--bad:#D70015;--badbg:#FDECEC;--info:#0071E3;--infobg:#EAF3FD;--teal:#4E7A45;}
@@ -154,13 +160,49 @@
   .docsigs{display:flex;gap:24px;flex-wrap:wrap}
   .docsig{flex:1;min-width:180px} .docsig img{height:44px;display:block;margin-bottom:-3px} .docsigln{border-top:1px solid #9a9aa0;font-size:10.5px;color:#6e6e73;padding-top:3px}
   .doctbl{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0} .doctbl td{padding:4px 6px;border-bottom:1px solid rgba(0,0,0,.07)} .doctbl td.r{text-align:right} .doctbl tr.tot td{font-weight:700;color:var(--navy);border-top:2px solid var(--navy)}
-  @media print{header.app,.noprint{display:none!important} body{background:#fff} .wrap{padding:0;max-width:100%} .card{box-shadow:none;border:0;padding:0}}
+  /* pickup coordinator checklist */
+  .pcphase{font-weight:800;color:#fff;background:var(--navy);border-radius:10px;padding:8px 14px;font-size:12.5px;letter-spacing:.4px;margin:18px 0 4px;display:flex;justify-content:space-between;align-items:center}
+  .pcstep{display:flex;gap:12px;align-items:flex-start;padding:13px 4px;border-bottom:1px solid rgba(0,0,0,.06)}
+  .pcstep:last-child{border-bottom:0}
+  .pcchk{width:32px;height:32px;border-radius:50%;border:2px solid #c6c6c8;flex:none;display:flex;align-items:center;justify-content:center;font-size:16px;background:#fff;cursor:pointer;transition:background .15s,border-color .15s}
+  .pcstep.on .pcchk{background:var(--ok);border-color:var(--ok);color:#fff}
+  .pcstep.lock{opacity:.4}
+  .pcstep .pt{font-weight:700;font-size:14.5px} .pcstep .pd{font-size:12.5px;color:var(--muted);margin-top:2px} .pcstep .pm{font-size:11px;color:#3F7A52;font-weight:700;margin-top:3px}
+  .pcgate{background:var(--badbg);border:1.5px solid rgba(215,0,21,.3);color:#A50010;border-radius:12px;padding:12px 15px;font-weight:800;text-align:center;margin:14px 0;letter-spacing:.3px}
+  .pcgate.ok{background:var(--okbg);border-color:rgba(36,138,61,.3);color:#1B6B30}
+  /* mobile bottom tab bar */
+  #tabbar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(38,52,32,.94);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);padding:7px 4px calc(7px + env(safe-area-inset-bottom));justify-content:space-around}
+  #tabbar.off{display:none!important}
+  #tabbar button{background:transparent;border:0;color:rgba(255,255,255,.6);font:inherit;font-size:10.5px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 10px;min-height:0;border-radius:12px}
+  #tabbar button .ti{font-size:21px;line-height:1}
+  #tabbar button.act{color:var(--gold)}
+  @media print{header.app,.noprint,#tabbar{display:none!important} body{background:#fff} .wrap{padding:0;max-width:100%} .card{box-shadow:none;border:0;padding:0}}
+  @media(max-width:700px){
+    #tabbar{display:flex}
+    input,select,textarea{font-size:16px!important}
+    .wrap{padding:16px 12px 120px}
+    header.app{padding:10px 14px}
+    header.app nav{display:none}
+    #hdrMid{min-width:0}
+    button{min-height:42px}
+    .card{padding:16px;border-radius:16px}
+    .jobrow{flex-wrap:wrap}
+    .agtime{min-width:0!important}
+    .sigslots{flex-direction:column}
+  }
   @media(max-width:640px){.grid,.rooms{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <header class="app"><h1 onclick="goOffice()">Rushmore Van Lines <span class="tag">MVP · STEPS 1–3</span></h1><div id="hdrMid"></div><nav id="nav"></nav></header>
 <div class="wrap" id="app"></div>
+<div id="tabbar" class="off">
+  <button id="tb_board" onclick="goOffice()"><span class="ti">🏠</span>Board</button>
+  <button id="tb_pc" onclick="location.hash='#pc'"><span class="ti">🗓</span>Pickups</button>
+  <button id="tb_inbox" onclick="if(location.hash)location.hash='';setTimeout(()=>render('inbox'),0)"><span class="ti">📥</span>Inbox</button>
+  <button id="tb_jobs" onclick="if(location.hash)location.hash='';setTimeout(()=>newJob(),0)"><span class="ti">📄</span>Jobs</button>
+  <button id="tb_fm" onclick="location.hash='#foreman'"><span class="ti">👷</span>Crew</button>
+</div>
 
 <script>
 const SEED_FM=[{name:'You (test foreman)',email:'foreman@example.com'},{name:'Mike Torres',email:'mike.torres@example.com'},{name:'Andre Cole',email:'andre.cole@example.com'}];
@@ -342,17 +384,135 @@ async function hydrateForemanLink(j){
 function emailLink(){const j=cur;const link=CURLINK||foremanLink(j);location.href='mailto:'+encodeURIComponent(j.foreman.email)+'?subject='+encodeURIComponent('Pickup assigned — Job '+j.id)+'&body='+encodeURIComponent('You have been assigned a pickup. Open your job and confirm a pickup window:\n\n'+link);}
 function openAsForeman(){if(cur&&cur.linkId)location.hash='j='+cur.linkId;else location.hash='fm='+enc(cur);}
 
+/* ===== PICKUP COORDINATOR — P1–P5 daily workflow ===== */
+const PC_PHASES=[
+ {id:'P1',name:'Morning — crew check-in',steps:[
+   {n:1,id:'contact',t:'Contact crew',d:'Reach the foreman — confirm en route & on schedule'},
+   {n:2,id:'eta',t:'Verify ETA',d:'Compare crew ETA to the customer window. Notify the customer if late.'},
+   {n:3,id:'custconf',t:'Confirm with customer',d:'Call/text day-of. Confirm location & access.'}]},
+ {id:'P2',name:'Pre-load checklist',steps:[
+   {n:4,id:'photos',t:'Photos before touch',d:'Crew shoots every room & all items before anything is moved'},
+   {n:5,id:'volume',t:'Volume check',d:'Actual cu.ft & item count vs the booking'},
+   {n:6,id:'invwalk',t:'Inventory walk',d:'Walk the list with the customer — confirm all items present'},
+   {n:7,id:'revised',t:'Revised estimate signed & office-approved',d:'Mismatch only: customer signs the revised estimate; office approves BEFORE loading',cond:'mismatch'},
+   {n:8,id:'paperwork',t:'Paperwork signed',d:'BOL, inventory, estimate — signed, initialed, dated',auto:'bol'},
+   {n:9,id:'payment',t:'Payment in full',d:'Collect before the first item is loaded — no exceptions'}]},
+ {id:'P3',name:'During loading',gate:true,steps:[
+   {n:11,id:'withcust',t:'Stay with customer',d:'Check in during loading — catch issues early'},
+   {n:12,id:'withcrew',t:'Stay with crew',d:'Available for extra items, materials, access changes'}]},
+ {id:'P4',name:'After loading — truck photos',gate:true,steps:[
+   {n:13,id:'truckphotos',t:'Truck photos',d:'Crew sends: items wrapped, padded, tied down — nothing loose'}]},
+ {id:'P5',name:'At storage facility',gate:true,steps:[
+   {n:10,id:'storageinfo',t:'Storage access info',d:'Unit #, gate codes, hours & on-site contact — before unloading'},
+   {n:15,id:'stacking',t:'Stacking & space efficiency',d:'Heavy on bottom, fill tight, fragile on top — stacked, not dropped'},
+   {n:14,id:'storagephotos',t:'Storage photos',d:'Crew photos once everything is stacked & in place'},
+   {n:16,id:'cfreport',t:'Foreman final CF report',d:'Actual cubic feet used — document & reconcile vs inventory'}]}];
+const PC_ALL={};PC_PHASES.forEach(p=>p.steps.forEach(s=>PC_ALL[s.id]=s));
+const PC_GATE=['photos','volume','invwalk','paperwork','payment'];
+function pcMe(){try{return localStorage.getItem('rvl_pc')||''}catch(e){return ''}}
+function pcSignIn(){const n=$('#pcName').value.trim();if(!n){alert('Enter your name.');return;}try{localStorage.setItem('rvl_pc',n);}catch(e){}renderPCPortal();}
+function pcSignOut(){try{localStorage.removeItem('rvl_pc');}catch(e){}renderPCPortal();}
+function pcStepState(j,st){
+  if(st.auto==='bol')return (j.bol&&j.bol.signed)?{done:true,auto:true,at:j.bol.signedAt,by:'signing records'}:null;
+  const s=j.pc&&j.pc.steps&&j.pc.steps[st.id];return (s&&s.done)?s:null;}
+function pcGateOK(j){const need=PC_GATE.slice();if(j.pc&&j.pc.mismatch)need.push('revised');
+  return need.every(id=>!!pcStepState(j,PC_ALL[id]));}
+function pcProgress(j){let done=0,total=0;PC_PHASES.forEach(ph=>ph.steps.forEach(st=>{
+  if(st.cond==='mismatch'&&!(j.pc&&j.pc.mismatch))return;total++;if(pcStepState(j,st))done++;}));return{done,total};}
+function pcToggle(jobId,stepId){const job=getJob(jobId);if(!job)return;const st=PC_ALL[stepId];
+  if(st.auto==='bol'){alert((job.bol&&job.bol.signed)?'This step is automatic — it completed from the actual signing records.':'This step completes automatically once the BOL is signed on site. Nothing to tap.');return;}
+  const phase=PC_PHASES.find(p=>p.steps.some(s=>s.id===stepId));
+  if(phase.gate&&!pcGateOK(job)&&!pcStepState(job,st)){alert('⛔ DO NOT LOAD\n\nLocked until the pre-load checklist is complete:\nphotos · volume check · inventory walk'+((job.pc&&job.pc.mismatch)?' · revised estimate':'')+' · paperwork · payment in full.');return;}
+  job.pc=job.pc||{};job.pc.steps=job.pc.steps||{};
+  const cur=job.pc.steps[stepId];
+  if(cur&&cur.done){delete job.pc.steps[stepId];logEvent(job,'Checklist UNCHECKED: '+st.t,'by '+(pcMe()||'coordinator'));}
+  else{
+    let note='';
+    if(stepId==='payment'){note=(prompt('Payment collected — amount & method (e.g. $2,500 · Zelle):')||'').trim();if(!note&&!confirm('Mark payment collected without an amount note?'))return;}
+    if(stepId==='volume')note=(prompt('Actual volume & pieces (booking: '+((job.est&&job.est.volume)||'?')+' cf'+(job.est&&job.est.inv?' · '+job.est.inv.totalPieces+' pcs':'')+'):')||'').trim();
+    if(stepId==='cfreport')note=(prompt('Final CF used (booking: '+((job.est&&job.est.volume)||'?')+' cf):')||'').trim();
+    if(stepId==='storageinfo')note=(prompt('Facility · unit # · gate code · hours · on-site contact:')||'').trim();
+    job.pc.steps[stepId]={done:true,at:now(),by:pcMe()||'coordinator',note:note};
+    logEvent(job,'Checklist ✓ '+st.t,(note?note+' · ':'')+'by '+(pcMe()||'coordinator'));
+  }
+  saveJob(job);renderPCJob(jobId);}
+function pcMismatchToggle(jobId){const job=getJob(jobId);if(!job)return;job.pc=job.pc||{steps:{}};
+  job.pc.mismatch=!job.pc.mismatch;
+  logEvent(job,job.pc.mismatch?'⚠ Volume / inventory MISMATCH flagged':'Mismatch flag cleared','by '+(pcMe()||'coordinator'));
+  saveJob(job);renderPCJob(jobId);}
+function renderPCPortal(){
+  tabbarSet('pc');
+  if(!pcMe()){$('#app').innerHTML=`<div class="modebar">PICKUP COORDINATOR</div>
+    <div class="card" style="max-width:440px;margin:30px auto"><h2>Coordinator sign in</h2>
+    <p class="sub">Your name is stamped on every step you confirm.</p>
+    <div class="f"><label class="fl">Your name</label><input id="pcName" placeholder="First Last" autocomplete="name"></div>
+    <div class="btnrow"><button onclick="pcSignIn()">Start my day →</button></div></div>`;return;}
+  const t=new Date();const iso=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+  const all=store.get().filter(j=>j.est&&j.status!=='Done');
+  const key=j=>(j.eta&&j.eta.date)||firstPickupKey(j);
+  const today=all.filter(j=>key(j)===iso).sort((a,b)=>fmWinOrder(a.eta&&a.eta.window)-fmWinOrder(b.eta&&b.eta.window));
+  const later=all.filter(j=>key(j)>iso&&key(j)!=='9999-99-99').sort((a,b)=>key(a)<key(b)?-1:1).slice(0,12);
+  const nodate=all.filter(j=>key(j)==='9999-99-99');
+  const row=j=>{const p=pcProgress(j);const gate=pcGateOK(j);
+    return `<div class="jobrow" onclick="renderPCJob('${j.id}')">
+     <div class="agtime">${j.eta?esc(j.eta.window):'<span style="color:#9A6A00">no window</span>'}<div style="font-weight:700;color:var(--muted);font-size:11px;margin-top:2px">${esc(key(j)==='9999-99-99'?'':key(j).slice(5))}</div></div>
+     <div style="flex:1"><div class="id">${j.id} · ${esc(j.est.customer||'—')}</div>
+       <div class="meta">${esc(szOf(j.est.oAddr))} · crew ${esc((j.crew&&j.crew.name)||(j.foreman&&j.foreman.name)||'—')}</div></div>
+     <div class="right">${gate?'<span class="pill p-ok">CLEAR TO LOAD</span>':(p.done?'<span class="pill p-warn">'+p.done+' / '+p.total+'</span>':'<span class="pill p-grey">not started</span>')}</div></div>`;};
+  $('#app').innerHTML=`<div class="modebar">PICKUP COORDINATOR · ${esc(pcMe().toUpperCase())} · <a href="javascript:void(0)" onclick="pcSignOut()" style="font-weight:600">sign out</a></div>
+   <div class="card"><h2>🗓 Today's pickups</h2><p class="sub">${t.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'})} — work each job through P1–P5. Loading stays locked until the pre-load gate clears.</p>
+    <div class="joblist">${today.map(row).join('')||'<div class="empty">No pickups scheduled for today.</div>'}</div></div>
+   ${nodate.length?`<div class="card"><h3 class="sg" style="color:#9A6A00">⚠ No pickup window yet</h3><div class="joblist">${nodate.map(row).join('')}</div></div>`:''}
+   ${later.length?`<div class="card"><h3 class="sg">Upcoming</h3><div class="joblist">${later.map(row).join('')}</div></div>`:''}`;
+  window.scrollTo(0,0);}
+function renderPCJob(id){const j=getJob(id);if(!j){renderPCPortal();return;}const e=j.est||{};
+  const gate=pcGateOK(j);const mm=!!(j.pc&&j.pc.mismatch);
+  const digits=p=>String(p||'').replace(/[^\d+]/g,'');
+  const cbtn=(label,href)=>href?`<a href="${href}" style="text-decoration:none"><button class="sm ghost" type="button">${label}</button></a>`:'';
+  const crewP=digits((j.crew&&j.crew.phone)||'');const custP=digits(e.phone||'');
+  const stepHtml=(ph,st)=>{
+    if(st.cond==='mismatch'&&!mm)return '';
+    const s=pcStepState(j,st);const locked=ph.gate&&!gate&&!s;
+    return `<div class="pcstep ${s?'on':''} ${locked?'lock':''}">
+      <div class="pcchk" onclick="pcToggle('${j.id}','${st.id}')">${s?'✓':st.n}</div>
+      <div style="flex:1"><div class="pt">${st.t}${st.auto?' <span class="tag tag-y">AUTO</span>':''}${st.cond?' <span class="tag tag-r">MISMATCH</span>':''}</div>
+        <div class="pd">${st.d}</div>
+        ${s?`<div class="pm">✓ ${esc(s.at||'')} · ${esc(s.by||'')}${s.note?' — '+esc(s.note):''}</div>`:''}
+        ${st.id==='eta'&&j.eta?`<div class="pm">confirmed window: ${esc(j.eta.whenLabel)}</div>`:''}
+        ${st.id==='paperwork'&&!(j.bol&&j.bol.signed)?'<div class="pm" style="color:#9A6A00">completes automatically when the BOL is signed on site</div>':''}
+      </div></div>`;};
+  const phaseHtml=ph=>{const steps=ph.steps.map(st=>stepHtml(ph,st)).join('');
+    return `${ph.id==='P3'?`<div class="pcgate ${gate?'ok':''}">${gate?'✅ PRE-LOAD GATE CLEAR — LOADING MAY PROCEED':'⛔ DO NOT LOAD UNTIL ALL PRE-LOAD STEPS ARE CONFIRMED'}</div>`:''}
+      <div class="pcphase"><span>${ph.id} · ${ph.name.toUpperCase()}</span></div>${steps}`;};
+  $('#app').innerHTML=`<div class="modebar">PICKUP COORDINATOR</div>
+   <div class="card"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h2 style="margin:0">Job ${j.id}</h2>${statusPill(j.status)}<button class="ghost sm right" onclick="renderPCPortal()">← My day</button></div>
+    <p class="sub" style="margin:8px 0 6px"><b>${esc(e.customer||'')}</b> · ${esc(e.oAddr||'')}${j.eta?' · <b>'+esc(j.eta.whenLabel)+'</b>':' · <span style="color:#9A6A00">no window confirmed</span>'}</p>
+    <div class="btnrow" style="margin:0">
+      ${cbtn('📞 Crew','tel:'+crewP)}${cbtn('💬 Crew','sms:'+crewP)}
+      ${cbtn('📞 Customer','tel:'+custP)}${cbtn('💬 Customer','sms:'+custP)}
+      <button class="ghost sm" type="button" onclick="openJob('${j.id}')">Office job →</button></div>
+    <div class="muted" style="margin-top:6px">crew: ${esc((j.crew&&j.crew.name)||(j.foreman&&j.foreman.name)||'not identified yet')} · ${e.volume?esc(e.volume)+' cf':''}${e.inv?' · '+e.inv.totalPieces+' pcs':''}</div></div>
+   <div class="card">
+    <div class="btnrow" style="margin:0 0 10px"><button class="sm${mm?'':' ghost'}" style="${mm?'background:#D70015;color:#fff':''}" type="button" onclick="pcMismatchToggle('${j.id}')">${mm?'⚠ MISMATCH FLAGGED — step 7 required · tap to clear':'⚠ Flag volume / inventory mismatch'}</button></div>
+    ${PC_PHASES.map(phaseHtml).join('')}
+   </div>`;window.scrollTo(0,0);}
+function tabbarSet(view){const tb=document.getElementById('tabbar');if(!tb)return;
+  tb.classList.toggle('off',view==null);if(view==null)return;
+  const map={dashboard:'tb_board',job:'tb_board',inbox:'tb_inbox',intake:'tb_jobs',pc:'tb_pc',foreman:'tb_fm'};
+  ['tb_board','tb_pc','tb_inbox','tb_jobs','tb_fm'].forEach(i=>{const el=document.getElementById(i);if(el)el.classList.toggle('act',map[view]===i);});}
+
 /* ---------- router & nav ---------- */
 function navHTML(mode){return `<button class="${mode==='office'?'act':''}" onclick="goOffice()">Dispatch (office)</button><button class="${mode==='foreman'?'act':''}" onclick="goForeman()">Foreman portal</button>`;}
 function router(){
   const h=location.hash||'';
   const mid=$('#hdrMid');if(mid)mid.innerHTML=(h===''?'<span class="hsr"><input id="hdrSearch" placeholder="🔎 Search jobs, estimates, contracts" oninput="hdrSearch()" onfocus="hdrSearch()" autocomplete="off"><div id="searchRes"></div></span>':'');
-  if(h.indexOf('#c=')===0){const tk=h.slice(3);$('#nav').innerHTML=navHTML('foreman');$('#app').innerHTML='<div class="card">Loading job…</div>';
+  if(h.indexOf('#pc')===0){$('#nav').innerHTML=navHTML('office')+' <button class="act">🗓 Coordinator</button>';renderPCPortal();return;}
+  if(h.indexOf('#c=')===0){tabbarSet(null);const tk=h.slice(3);$('#nav').innerHTML=navHTML('foreman');$('#app').innerHTML='<div class="card">Loading job…</div>';
     fetch(BACKEND+'/card/'+encodeURIComponent(tk)).then(r=>{if(!r.ok)throw 0;return r.json();}).then(d=>{saveJob(d.job);renderCardGate(d.job.id);}).catch(()=>{$('#app').innerHTML='<div class="card">This customer card link is no longer valid — ask the office to send you a fresh one.</div>';});return;}
-  if(h.indexOf('#j=')===0){const id=h.slice(3);$('#nav').innerHTML=navHTML('foreman');$('#app').innerHTML='<div class="card">Loading job…</div>';fetch(BACKEND+'/job/'+encodeURIComponent(id)).then(r=>{if(!r.ok)throw 0;return r.json();}).then(job=>{job.linkId=id;saveJob(job);if(job.foreman&&job.foreman.email)setFm(job.foreman.email);renderFmJob(job.id,true);}).catch(()=>{$('#app').innerHTML='<div class="card">This link could not be opened — it may have expired. Ask the office to resend.</div>';});return;}
-  if(h.indexOf('#fm=')===0){try{const job=dec(h.slice(4));if(!getJob(job.id))saveJob(job);if(job.foreman&&job.foreman.email)setFm(job.foreman.email);$('#nav').innerHTML=navHTML('foreman');renderFmJob(job.id,true);}catch(e){$('#app').innerHTML='<div class="card">Invalid link.</div>';}return;}
-  if(h.indexOf('#foreman')===0){$('#nav').innerHTML=navHTML('foreman');renderForemanPortal();return;}
-  $('#nav').innerHTML=navHTML('office')+' <button onclick="newJob()">📄 Jobs</button>';render('dashboard');
+  if(h.indexOf('#j=')===0){tabbarSet(null);const id=h.slice(3);$('#nav').innerHTML=navHTML('foreman');$('#app').innerHTML='<div class="card">Loading job…</div>';fetch(BACKEND+'/job/'+encodeURIComponent(id)).then(r=>{if(!r.ok)throw 0;return r.json();}).then(job=>{job.linkId=id;saveJob(job);if(job.foreman&&job.foreman.email)setFm(job.foreman.email);renderFmJob(job.id,true);}).catch(()=>{$('#app').innerHTML='<div class="card">This link could not be opened — it may have expired. Ask the office to resend.</div>';});return;}
+  if(h.indexOf('#fm=')===0){tabbarSet(null);try{const job=dec(h.slice(4));if(!getJob(job.id))saveJob(job);if(job.foreman&&job.foreman.email)setFm(job.foreman.email);$('#nav').innerHTML=navHTML('foreman');renderFmJob(job.id,true);}catch(e){$('#app').innerHTML='<div class="card">Invalid link.</div>';}return;}
+  if(h.indexOf('#foreman')===0){tabbarSet('foreman');$('#nav').innerHTML=navHTML('foreman');renderForemanPortal();return;}
+  $('#nav').innerHTML=navHTML('office')+' <button onclick="location.hash=\'#pc\'">🗓 Coordinator</button> <button onclick="newJob()">📄 Jobs</button>';render('dashboard');
 }
 /* ---------- header search: board jobs + stored estimates + generated BOLs ---------- */
 let _docsCache=null,_docsTs=0;
@@ -389,7 +549,7 @@ function goOffice(){if(location.hash)location.hash='';else router();}
 function goForeman(){if(location.hash==='#foreman')router();else location.hash='#foreman';}
 
 /* ===== OFFICE ===== */
-function render(v){const a=$('#app');if(v==='dashboard')return a.innerHTML=vDashboard();if(v==='intake'){a.innerHTML=vIntake();setTimeout(loadUploads,0);return;}if(v==='inbox')return a.innerHTML=vInbox();if(v==='job')return a.innerHTML=vJob();}
+function render(v){const a=$('#app');tabbarSet(v);if(v==='dashboard')return a.innerHTML=vDashboard();if(v==='intake'){a.innerHTML=vIntake();setTimeout(loadUploads,0);return;}if(v==='inbox')return a.innerHTML=vInbox();if(v==='job')return a.innerHTML=vJob();}
 function vInbox(){
   const all=store.get();
   const st=j=>((j.bol||{}).review||{}).state||'pending';
@@ -417,7 +577,7 @@ function szOf(a){const m=(a||'').match(/,\s*([A-Z]{2})\s+(\d{5})/);return m?m[1]
 function officeRow(j){return `<div class="jobrow" onclick="openJob('${j.id}')">
     <div class="agtime"${j.eta?'':' style="color:#9A6A00"'}>${j.eta?esc(j.eta.window):'needs ETA'}</div>
     <div style="flex:1"><div class="id">${j.id} · ${esc(j.est?.customer)||'—'}${cfLine(j)}</div>
-      <div class="meta">${esc(szOf(j.est?.oAddr))} → ${esc(szOf(j.est?.dAddr))} ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} ${j.foreman?'· '+esc(j.foreman.name):(j.crew?'· 👷 '+esc(j.crew.name):'')}${j.bol&&j.bol.signed?((j.bol.review||{}).state==='approved'?' · <b style="color:#1D9E75">BOL ✓</b>':(j.bol.review||{}).state==='rejected'?' · <b style="color:#D70015">BOL sent back</b>':' · <b style="color:#9A6A00">BOL to review</b>'):''}</div></div>
+      <div class="meta">${esc(szOf(j.est?.oAddr))} → ${esc(szOf(j.est?.dAddr))} ${j.est?.inv?'· '+j.est.inv.totalPieces+' pcs':''} ${j.foreman?'· '+esc(j.foreman.name):(j.crew?'· 👷 '+esc(j.crew.name):'')}${j.bol&&j.bol.signed?((j.bol.review||{}).state==='approved'?' · <b style="color:#1D9E75">BOL ✓</b>':(j.bol.review||{}).state==='rejected'?' · <b style="color:#D70015">BOL sent back</b>':' · <b style="color:#9A6A00">BOL to review</b>'):''}${(function(){if(!j.pc)return '';const p=pcProgress(j);return p.done?' · <b style="color:'+(pcGateOK(j)?'#1B6B30':'#9A6A00')+'">PC '+p.done+'/'+p.total+'</b>':'';})()}</div></div>
     <div class="right">${statusPill(j.status)}</div></div>`;}
 function shortPick(j){const k=firstPickupKey(j);if(k==='9999-99-99')return 'no date';const p=k.split('-');return (+p[1])+'/'+(+p[2]);}
 function origSZ(j){const m=(j.est&&j.est.oAddr||'').match(/,\s*([A-Z]{2})\s+(\d{5})/);return m?m[1]+' '+m[2]:'';}
