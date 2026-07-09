@@ -480,6 +480,9 @@ function renderPCJob(id){const j=getJob(id);if(!j){renderPCPortal();return;}cons
         ${s?`<div class="pm">✓ ${esc(s.at||'')} · ${esc(s.by||'')}${s.note?' — '+esc(s.note):''}</div>`:''}
         ${st.id==='eta'&&j.eta?`<div class="pm">confirmed window: ${esc(j.eta.whenLabel)}</div>`:''}
         ${st.id==='paperwork'&&!(j.bol&&j.bol.signed)?'<div class="pm" style="color:#9A6A00">completes automatically when the BOL is signed on site</div>':''}
+        ${st.id==='photos'?pcEvid(j,'rooms'):''}${st.id==='truckphotos'?pcEvid(j,'truck'):''}${st.id==='storagephotos'?pcEvid(j,'storage'):''}
+        ${st.id==='volume'&&j.field&&j.field.volumeActual?`<div class="pm">crew reported: ${esc(j.field.volumeActual)} cf · ${esc(j.field.piecesActual||'?')} pcs (booking ${esc(e.volume||'?')} cf${e.inv?' · '+e.inv.totalPieces+' pcs':''})</div>`:''}
+        ${st.id==='cfreport'&&j.field&&j.field.cfFinal?`<div class="pm">crew final: ${esc(j.field.cfFinal)} cf (booking ${esc(e.volume||'?')} cf)</div>`:''}
       </div></div>`;};
   const phaseHtml=ph=>{const steps=ph.steps.map(st=>stepHtml(ph,st)).join('');
     return `${ph.id==='P3'?`<div class="pcgate ${gate?'ok':''}">${gate?'✅ PRE-LOAD GATE CLEAR — LOADING MAY PROCEED':'⛔ DO NOT LOAD UNTIL ALL PRE-LOAD STEPS ARE CONFIRMED'}</div>`:''}
@@ -810,6 +813,49 @@ function renderFmDashboard(){const me=fmMe();const mine=store.get().filter(j=>j.
       <button class="ghost sm right" onclick="fmSignOut()">Sign out</button></div></div>
     <div class="card"><h3 class="sg">Your jobs · by date</h3><div class="joblist">${body}</div></div>`;}
 function openFmJob(id){renderFmJob(id,false);}
+/* ---------- crew photo evidence (rooms / truck / storage) ---------- */
+function shrinkPhoto(file){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{try{
+  const mx=1600;let w=img.width,h=img.height;
+  if(Math.max(w,h)>mx){const k=mx/Math.max(w,h);w=Math.round(w*k);h=Math.round(h*k);}
+  const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+  res(c.toDataURL('image/jpeg',.72));}catch(e){rej(e);}};img.onerror=rej;img.src=URL.createObjectURL(file);});}
+async function fmUpload(jobId,kind,input){
+  const files=[...(input.files||[])];if(!files.length)return;
+  const lbl=document.getElementById('up_'+kind);if(lbl)lbl.textContent='⏳ uploading '+files.length+'…';
+  const j=getJob(jobId);if(!j)return;
+  j.field=j.field||{};j.field.photos=j.field.photos||{};j.field.photos[kind]=j.field.photos[kind]||[];
+  let okc=0;
+  for(const f of files){
+    try{
+      const img=await shrinkPhoto(f);
+      const r=await fetch(BACKEND+'/photos/'+encodeURIComponent(jobId),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:kind,img:img,by:(j.crew&&j.crew.name)||(j.foreman&&j.foreman.name)||'crew'})});
+      const d=await r.json().catch(()=>({}));
+      if(d&&d.ok){j.field.photos[kind].push(d.photo.pid);okc++;}
+    }catch(e){}
+  }
+  if(okc)logEvent(j,'📸 '+okc+' photo(s) uploaded — '+kind,'by '+((j.crew&&j.crew.name)||(j.foreman&&j.foreman.name)||'crew'));
+  saveJob(j);input.value='';
+  renderFmJob(jobId,false);
+  if(okc<files.length)alert((files.length-okc)+' photo(s) failed to upload — bad signal or the backend is waking up. Tap Add photos and retry.');
+}
+function fmSaveVol(id){const v=$('#f_volAct').value.trim(),p=$('#f_pcsAct').value.trim();if(!v){alert('Enter the actual cubic feet.');return;}
+  const j=getJob(id);if(!j)return;j.field=j.field||{};j.field.volumeActual=v;j.field.piecesActual=p;
+  logEvent(j,'Crew reported actual volume',v+' cf · '+(p||'?')+' pcs (booking '+((j.est&&j.est.volume)||'?')+' cf)');
+  saveJob(j);renderFmJob(id,false);}
+function fmSaveCF(id){const v=$('#f_cfFinal').value.trim();if(!v){alert('Enter the final cubic feet used.');return;}
+  const j=getJob(id);if(!j)return;j.field=j.field||{};j.field.cfFinal=v;
+  logEvent(j,'Foreman final CF report',v+' cf (booking '+((j.est&&j.est.volume)||'?')+' cf)');
+  saveJob(j);renderFmJob(id,false);}
+function openGallery(jobId,kind,from){const j=getJob(jobId);const ids=(j&&j.field&&j.field.photos&&j.field.photos[kind])||[];
+  const back=from==='pc'?`renderPCJob('${jobId}')`:`renderFmJob('${jobId}',false)`;
+  const label={rooms:'Room photos — before touch',truck:'Truck photos — after loading',storage:'Storage photos — stacked'}[kind]||kind;
+  $('#app').innerHTML=`<div class="modebar">JOB ${esc(jobId)} · PHOTOS</div>
+   <div class="card"><div class="btnrow" style="margin:0 0 10px"><button class="ghost sm" onclick="${back}">← Back</button></div>
+   <h3 class="sg">📸 ${label} · ${ids.length}</h3>
+   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px">${ids.map(p=>`<a href="${BACKEND}/photos/${esc(jobId)}/${esc(p)}" target="_blank"><img src="${BACKEND}/photos/${esc(jobId)}/${esc(p)}" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;display:block;background:#eee"></a>`).join('')||'<p class="muted">No photos yet.</p>'}</div></div>`;
+  window.scrollTo(0,0);}
+function pcEvid(j,kind){const n=((j.field&&j.field.photos&&j.field.photos[kind])||[]).length;
+  return n?`<div class="pm">📸 crew uploaded ${n} — <a href="javascript:void(0)" onclick="openGallery('${j.id}','${kind}','pc')">view</a></div>`:'<div class="pm" style="color:#9A6A00">no crew photos yet</div>';}
 function estimateHTML(e){
   const rows=[];
   const add=(l,v)=>{if(v!=null&&v!==''&&+v!==0)rows.push(`<div class="kv"><span class="k">${l}</span><span>${money(+v)}</span></div>`);};
@@ -865,6 +911,19 @@ function renderFmJob(id,fromLink){
    <div class="card"><h3 class="sg">🧾 Job estimate ${e.estimateDate?`<span class="muted" style="font-weight:600">· ${esc(e.estimateDate)}</span>`:''}</h3>
      ${estimateHTML(e)}
      <div class="btnrow"><button class="alt" style="width:100%;font-size:15.5px;padding:14px 20px" onclick="window.open('${BACKEND}/estimates/uploads/${esc(job.id)}/pdf','_blank')">📄 View the original estimate (PDF) →</button></div></div>
+   ${(function(){const f=job.field||{};const ph=f.photos||{};
+     const task=(n,title,ok,body)=>`<div class="pcstep ${ok?'on':''}"><div class="pcchk">${ok?'✓':n}</div><div style="flex:1"><div class="pt">${title}</div>${body||''}</div></div>`;
+     const upBtn=(kind,label)=>`<div style="margin-top:6px"><input type="file" id="file_${kind}" accept="image/*" capture="environment" multiple style="display:none" onchange="fmUpload('${job.id}','${kind}',this)"><button class="sm ghost" type="button" onclick="document.getElementById('file_${kind}').click()">📸 ${label}</button> <span class="pm" id="up_${kind}">${(ph[kind]||[]).length?(ph[kind].length+' uploaded ✓'):''}</span> ${(ph[kind]||[]).length?`<button class="sm ghost" type="button" onclick="openGallery('${job.id}','${kind}','fm')">view</button>`:''}</div>`;
+     return `<div class="card fmwrap"><h3 class="sg">📋 Your tasks on this job</h3>
+      <p class="muted" style="margin:-4px 0 8px">The pickup coordinator follows these live — upload photos AS YOU GO, not at the end.</p>
+      ${task(1,'Confirm the pickup window',!!job.eta, job.eta?`<div class="pm">${esc(job.eta.whenLabel)}</div>`:'<div class="pd">Use the window form at the top of this page.</div>')}
+      ${task(2,'Room photos — BEFORE touching anything',(ph.rooms||[]).length>0,'<div class="pd">Every room &amp; all items, before the crew moves a single thing.</div>'+upBtn('rooms','Add room photos'))}
+      ${task(3,'Actual volume &amp; piece count',!!f.volumeActual,`<div class="pd">Booking: ${esc(e.volume||'?')} cf${e.inv?' · '+e.inv.totalPieces+' pcs':''}. Report what is ACTUALLY there.</div><div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap"><input id="f_volAct" placeholder="actual cf" inputmode="numeric" value="${esc(f.volumeActual||'')}" style="max-width:130px"><input id="f_pcsAct" placeholder="pieces" inputmode="numeric" value="${esc(f.piecesActual||'')}" style="max-width:110px"><button class="sm ghost" type="button" onclick="fmSaveVol('${job.id}')">Save</button></div>`)}
+      ${task(4,'Fill &amp; sign the Bill of Lading',!!(job.bol&&job.bol.signed), (job.bol&&job.bol.signed)?`<div class="pm">signed ${esc(job.bol.signedAt||'')}</div>`:'<div class="pd">Unlocks after the pickup window — use the banner at the top.</div>')}
+      ${task(5,'Truck photos — after loading',(ph.truck||[]).length>0,'<div class="pd">Wrapped, padded, tied down — nothing loose.</div>'+upBtn('truck','Add truck photos'))}
+      ${task(6,'Storage photos — stacked in place',(ph.storage||[]).length>0,'<div class="pd">Once everything is stacked &amp; organized at the facility.</div>'+upBtn('storage','Add storage photos'))}
+      ${task(7,'Final CF used',!!f.cfFinal,`<div class="pd">Actual cubic feet your load takes in storage — reconciled vs the booking.</div><div style="display:flex;gap:8px;margin-top:6px"><input id="f_cfFinal" placeholder="final cf" inputmode="numeric" value="${esc(f.cfFinal||'')}" style="max-width:130px"><button class="sm ghost" type="button" onclick="fmSaveCF('${job.id}')">Save</button></div>`)}
+     </div>`;})()}
    ${done?`<div class="card">
     <h3 class="sg">Change pickup window</h3><p class="muted" style="margin:-4px 0 10px">Currently confirmed: ${esc(job.eta.whenLabel)}.</p>
     ${etaForm}</div>`:''}`;
